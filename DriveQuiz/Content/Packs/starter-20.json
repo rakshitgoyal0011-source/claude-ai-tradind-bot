@@ -1,0 +1,186 @@
+{
+  "id": "starter-20",
+  "theme": "Mixed Starter",
+  "questions": [
+    {
+      "id": "s01",
+      "prompt": "What is the capital city of Australia?",
+      "canonicalAnswer": "Canberra",
+      "alternates": [],
+      "factOneLiner": "Canberra was built as a compromise after Sydney and Melbourne both wanted the title.",
+      "difficulty": "medium",
+      "estimatedSeconds": 28
+    },
+    {
+      "id": "s02",
+      "prompt": "How many strings does a standard violin have?",
+      "canonicalAnswer": "4",
+      "alternates": ["four", "four strings"],
+      "factOneLiner": "The four strings are tuned in perfect fifths: G, D, A and E.",
+      "difficulty": "easy",
+      "estimatedSeconds": 25
+    },
+    {
+      "id": "s03",
+      "prompt": "Which planet is known as the Red Planet?",
+      "canonicalAnswer": "Mars",
+      "alternates": [],
+      "factOneLiner": "The red comes from iron oxide, essentially rust, spread across its surface.",
+      "difficulty": "easy",
+      "estimatedSeconds": 26
+    },
+    {
+      "id": "s04",
+      "prompt": "Who painted the Mona Lisa?",
+      "canonicalAnswer": "Leonardo da Vinci",
+      "alternates": ["da Vinci", "Leonardo", "Davinci"],
+      "factOneLiner": "It hung in Napoleon's bedroom for a few years before it moved to the Louvre.",
+      "difficulty": "easy",
+      "estimatedSeconds": 27
+    },
+    {
+      "id": "s05",
+      "prompt": "What is the largest ocean on Earth?",
+      "canonicalAnswer": "Pacific",
+      "alternates": ["the Pacific", "Pacific Ocean"],
+      "factOneLiner": "It covers more area than every piece of dry land on the planet combined.",
+      "difficulty": "easy",
+      "estimatedSeconds": 26
+    },
+    {
+      "id": "s06",
+      "prompt": "Which French general crowned himself emperor in 1804?",
+      "canonicalAnswer": "Napoleon",
+      "alternates": ["Napoleon Bonaparte", "Bonaparte"],
+      "factOneLiner": "He took the crown from the pope's hands and placed it on his own head.",
+      "difficulty": "medium",
+      "estimatedSeconds": 30
+    },
+    {
+      "id": "s07",
+      "prompt": "Which gas do plants absorb from the air to grow?",
+      "canonicalAnswer": "carbon dioxide",
+      "alternates": ["CO2", "carbon dioxide gas"],
+      "factOneLiner": "A large tree can pull tens of kilograms of it out of the air every year.",
+      "difficulty": "easy",
+      "estimatedSeconds": 28
+    },
+    {
+      "id": "s08",
+      "prompt": "What is the longest river in Africa?",
+      "canonicalAnswer": "Nile",
+      "alternates": ["the Nile", "River Nile"],
+      "factOneLiner": "It runs through eleven countries before it reaches the Mediterranean.",
+      "difficulty": "easy",
+      "estimatedSeconds": 26
+    },
+    {
+      "id": "s09",
+      "prompt": "In which country would you find the Great Barrier Reef?",
+      "canonicalAnswer": "Australia",
+      "alternates": [],
+      "factOneLiner": "It is made of roughly nine hundred islands and nearly three thousand separate reefs.",
+      "difficulty": "easy",
+      "estimatedSeconds": 28
+    },
+    {
+      "id": "s10",
+      "prompt": "Which metal is liquid at room temperature?",
+      "canonicalAnswer": "mercury",
+      "alternates": [],
+      "factOneLiner": "It is the only metal that stays liquid at ordinary room temperature.",
+      "difficulty": "medium",
+      "estimatedSeconds": 27
+    },
+    {
+      "id": "s11",
+      "prompt": "Who wrote the play Romeo and Juliet?",
+      "canonicalAnswer": "Shakespeare",
+      "alternates": ["William Shakespeare"],
+      "factOneLiner": "He wrote it early in his career, around 1595.",
+      "difficulty": "easy",
+      "estimatedSeconds": 26
+    },
+    {
+      "id": "s12",
+      "prompt": "How many sides does a hexagon have?",
+      "canonicalAnswer": "6",
+      "alternates": ["six", "six sides"],
+      "factOneLiner": "Honeybees build in hexagons because that shape wastes the least wax.",
+      "difficulty": "easy",
+      "estimatedSeconds": 24
+    },
+    {
+      "id": "s13",
+      "prompt": "Which country gave the Statue of Liberty to the United States?",
+      "canonicalAnswer": "France",
+      "alternates": [],
+      "factOneLiner": "It arrived in 1885 packed into more than two hundred crates.",
+      "difficulty": "medium",
+      "estimatedSeconds": 29
+    },
+    {
+      "id": "s14",
+      "prompt": "What is the hardest naturally occurring substance?",
+      "canonicalAnswer": "diamond",
+      "alternates": ["diamonds"],
+      "factOneLiner": "It is nothing but carbon, arranged under enormous pressure.",
+      "difficulty": "easy",
+      "estimatedSeconds": 27
+    },
+    {
+      "id": "s15",
+      "prompt": "What is the tallest mountain above sea level?",
+      "canonicalAnswer": "Everest",
+      "alternates": ["Mount Everest", "Mt Everest"],
+      "factOneLiner": "Measured from its own base instead, Mauna Kea is actually taller.",
+      "difficulty": "easy",
+      "estimatedSeconds": 27
+    },
+    {
+      "id": "s16",
+      "prompt": "In which year did the Berlin Wall fall?",
+      "canonicalAnswer": "1989",
+      "alternates": ["nineteen eighty nine"],
+      "factOneLiner": "It came down after a press conference announced the new rules early by mistake.",
+      "difficulty": "medium",
+      "estimatedSeconds": 30
+    },
+    {
+      "id": "s17",
+      "prompt": "What is the main ingredient in guacamole?",
+      "canonicalAnswer": "avocado",
+      "alternates": ["avocados"],
+      "factOneLiner": "The name comes from the Aztec word ahuacatl.",
+      "difficulty": "easy",
+      "estimatedSeconds": 25
+    },
+    {
+      "id": "s18",
+      "prompt": "Which sea creature has three hearts?",
+      "canonicalAnswer": "octopus",
+      "alternates": ["the octopus", "octopuses"],
+      "factOneLiner": "Two pump blood to the gills and one pumps it to the rest of the body.",
+      "difficulty": "hard",
+      "estimatedSeconds": 29
+    },
+    {
+      "id": "s19",
+      "prompt": "Which language has the most native speakers in the world?",
+      "canonicalAnswer": "Mandarin",
+      "alternates": ["Mandarin Chinese", "Chinese"],
+      "factOneLiner": "Around nine hundred million people speak it as a first language.",
+      "difficulty": "medium",
+      "estimatedSeconds": 30
+    },
+    {
+      "id": "s20",
+      "prompt": "Who was the first person to walk on the moon?",
+      "canonicalAnswer": "Neil Armstrong",
+      "alternates": ["Armstrong"],
+      "factOneLiner": "He and Buzz Aldrin spent about two and a half hours outside the module.",
+      "difficulty": "easy",
+      "estimatedSeconds": 28
+    }
+  ]
+}
