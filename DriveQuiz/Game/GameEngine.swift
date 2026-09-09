@@ -58,6 +58,7 @@ final class GameEngine {
         stopRequested = true
         loopTask?.cancel()
         loopTask = nil
+        clock.stop()
         audio.deactivate()
         card.isRunning = false
         switch phase {
@@ -93,6 +94,7 @@ final class GameEngine {
         await audio.say(summary)
         phase = .finished(summary: summary)
         card.isRunning = false
+        clock.stop()
         audio.deactivate()
     }
 
@@ -213,6 +215,7 @@ final class GameEngine {
         await audio.say(summary)
         phase = .finished(summary: summary)
         card.isRunning = false
+        clock.stop()
         audio.deactivate()
     }
 
@@ -224,8 +227,18 @@ final class GameEngine {
         guard count > 0 else {
             return "That is not quite enough time for a round. Drive safely."
         }
-        return "\(plan.theme). I have \(count) questions for your \(minutes) minute drive. "
-            + "Say repeat, skip, pause, or stop at any time. Here is the first one."
+
+        let opener: String
+        switch plan.mode {
+        case .manualMinutes:
+            opener = "\(plan.theme). I have \(count) questions for your \(minutes) minute drive."
+        case .estimatedArrival:
+            // The queue is padded past the estimate for traffic, so promising
+            // a question count here would be a lie.
+            opener = "\(plan.theme). About \(minutes) minutes to your destination. "
+                + "I will wrap up as you arrive."
+        }
+        return opener + " Say repeat, skip, pause, or stop at any time. Here is the first one."
     }
 
     private func correctText() -> String {
@@ -238,12 +251,30 @@ final class GameEngine {
     }
 
     private func remainingText() -> String {
-        let asked = session.asked
-        let left = max(0, plan.questions.count - asked)
         let minutes = Int((clock.remainingSeconds / 60).rounded())
+        let minutePart = minutes <= 1 ? "about a minute" : "about \(minutes) minutes"
+
+        let left: Int
+        switch plan.mode {
+        case .manualMinutes:
+            left = max(0, plan.questions.count - session.asked)
+        case .estimatedArrival:
+            // The queue is padded for traffic, so count what the remaining
+            // drive actually has room for rather than what is queued.
+            let usable = max(0, clock.remainingSeconds - PackPlanner.closingSeconds)
+            let average = averageQuestionSeconds
+            let capacity = average > 0 ? Int(usable / average) : 0
+            left = min(capacity, max(0, plan.questions.count - session.asked))
+        }
+
         let questionPart = left == 1 ? "One question left" : "\(left) questions left"
-        let minutePart = minutes <= 1 ? "about a minute of driving" : "about \(minutes) minutes of driving"
-        return "\(questionPart), \(minutePart)."
+        return "\(questionPart), \(minutePart) to go."
+    }
+
+    private var averageQuestionSeconds: TimeInterval {
+        let upcoming = plan.questions.dropFirst(session.asked)
+        guard !upcoming.isEmpty else { return 0 }
+        return upcoming.reduce(0) { $0 + $1.estimatedSeconds } / Double(upcoming.count)
     }
 
     private func summaryText(interrupted: Bool) -> String {

@@ -9,6 +9,8 @@ protocol SessionClock: AnyObject {
     func start()
     func pause()
     func resume()
+    /// Release anything the clock is polling. Called once the game ends.
+    func stop()
 }
 
 final class ManualClock: SessionClock {
@@ -50,4 +52,6 @@ final class ManualClock: SessionClock {
         startedAt = Date()
         isPaused = false
     }
+
+    func stop() { pause() }
 }

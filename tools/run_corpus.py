@@ -67,6 +67,39 @@ ok(command("keep going", paused) == "resume", "paused: resume")
 ok(command("stop", paused) == "stop", "paused: stop")
 ok(command("skip", paused) is None, "paused: skip must be ignored")
 
+from grader_reference import (plan, should_start_next, eta_remaining,
+                              eta_should_wrap_up, eta_replacing)
+
+# --- PackPlanner budget arithmetic
+q30 = [30.0] * 40
+ok(plan(q30, 600)[0] == 16, "600s drive fits 16 x 30s questions")
+ok(plan(q30, 600, 1.3)[0] == 21, "600s with 1.3 contingency queues 21")
+ok(plan(q30, 600, 0.5)[0] == 16, "contingency below 1.0 is ignored")
+ok(plan([30.0] * 20, 180)[0] == 2, "3 minute drive fits 2 questions")
+ok(plan([30.0] * 20, 30)[0] == 0, "30 second drive fits none")
+ok(plan([30.0] * 20, 30)[2] is False, "too-short drive is not 'ran out'")
+ok(plan([30.0], 3600)[2] is True, "one question against an hour ran out")
+ok(plan([30.0] * 10, 3600, 1.3)[2] is True, "ran out measured against real drive")
+ok(plan(q30, 600)[2] is False, "plenty of questions left is not 'ran out'")
+
+# --- never start a question that cannot finish before the summary
+ok(should_start_next(120, 30) is True, "2 minutes left starts a 30s question")
+ok(should_start_next(90, 30) is True, "exactly at the wrap-up threshold still asks")
+ok(should_start_next(89, 30) is False, "inside the threshold stops asking")
+ok(should_start_next(60, 30) is False, "60s left is inside the threshold")
+ok(should_start_next(100, 80) is False, "long question would cut off the summary")
+ok(should_start_next(110, 80) is True, "110s leaves room for an 80s question")
+
+# --- ETA snapshot behaviour
+ok(eta_remaining(600, 0) == 600, "eta at rest")
+ok(eta_remaining(600, 120) == 480, "eta counts down")
+ok(eta_remaining(60, 300) == 0, "eta never goes negative")
+ok(eta_remaining(-50, 0) == 0, "negative eta clamps to zero")
+ok(eta_should_wrap_up(600, 0) is False, "ten minutes out is not wrap-up")
+ok(eta_should_wrap_up(600, 511) is True, "89 seconds out is wrap-up")
+ok(eta_replacing(600, 0) == 600, "failed refresh keeps the good estimate")
+ok(eta_replacing(600, 900) == 900, "traffic refresh replaces the estimate")
+
 print(f"{'FAIL' if fails else 'PASS'}: {checks - len(fails)}/{checks} cases")
 for f in fails:
     print("  -", f)

@@ -160,3 +160,50 @@ def command(raw, allowed=None):
             if phrase_matches(tokens, phrase):
                 return name
     return None
+
+
+# ---------------------------------------------------------------------------
+# PackPlanner and ETASnapshot mirrors.
+#
+# The seeded shuffle is NOT mirrored: Swift's shuffled(using:) index
+# derivation is an implementation detail. Every case below uses questions of
+# equal length, so selection COUNTS are order independent and still verify
+# the budget arithmetic. Seed determinism is covered by XCTest only.
+# ---------------------------------------------------------------------------
+
+INTRO_SECONDS = 12.0
+CLOSING_SECONDS = 25.0
+WRAP_UP_THRESHOLD = 90.0
+
+
+def plan(question_seconds, available_seconds, contingency=1.0):
+    """Returns (chosen_count, estimated_content_seconds, ran_out)."""
+    base_budget = available_seconds - INTRO_SECONDS - WRAP_UP_THRESHOLD
+    budget = base_budget * max(1.0, contingency)
+    if base_budget <= 0:
+        return (0, 0.0, False)
+
+    chosen, used = 0, 0.0
+    for seconds in question_seconds:
+        if used + seconds <= budget:
+            chosen += 1
+            used += seconds
+    ran_out = chosen == len(question_seconds) and (base_budget - min(used, base_budget)) > 45
+    return (chosen, used, ran_out)
+
+
+def should_start_next(remaining_seconds, question_seconds):
+    return (remaining_seconds >= WRAP_UP_THRESHOLD
+            and remaining_seconds - question_seconds >= CLOSING_SECONDS)
+
+
+def eta_remaining(seconds, elapsed):
+    return max(0.0, max(0.0, seconds) - elapsed)
+
+
+def eta_should_wrap_up(seconds, elapsed, threshold=WRAP_UP_THRESHOLD):
+    return eta_remaining(seconds, elapsed) < threshold
+
+
+def eta_replacing(current_seconds, fresh_seconds):
+    return fresh_seconds if fresh_seconds > 0 else current_seconds
