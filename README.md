@@ -155,6 +155,20 @@ how much being wrong costs: zero for `stop`, which ends the drive, zero for
 `skip`, which discards a guess, and two for the recoverable ones, so "hold on a
 second" still pauses while "hold on, is it Rome" is graded as an answer.
 
+A third pass over the trip, storage and UI layers found four more:
+
+| Defect | Consequence |
+|---|---|
+| The loop did not wait out an audio interruption | A two-minute call burned silently through every remaining question |
+| An interruption ending with no resume left the loop spinning | Same, with no way to recover |
+| `begin()` gave no feedback during a GPS fix and route lookup | A second tap started a second voice loop over the first |
+| Location continuations had no timeout | A callback that never arrived left the Start button dead, silently |
+
+The interruption one is the worst of the ten found so far. Every `say` and
+`hear` returns instantly while the session is interrupted, so the loop ran at
+full speed through the pack and the drive ended with a score the driver never
+had a chance to earn.
+
 **Not verified.** Nothing has been compiled. There is no Swift toolchain and no
 Xcode in the container, and `download.swift.org` is blocked by the proxy.
 Expect to fix small compile errors on the first build. The XCTest suite mirrors

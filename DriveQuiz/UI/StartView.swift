@@ -20,6 +20,7 @@ struct StartView: View {
     @State private var results: [DestinationResult] = []
     @State private var chosen: DestinationResult?
     @State private var isSearching = false
+    @State private var isStarting = false
     @State private var status: String?
 
     @State private var engine: GameEngine?
@@ -78,12 +79,21 @@ struct StartView: View {
             Spacer(minLength: 8)
 
             Button(action: begin) {
-                Text("Start")
-                    .font(.system(size: 30, weight: .bold, design: .rounded))
-                    .frame(maxWidth: .infinity, minHeight: 92)
+                Group {
+                    if isStarting {
+                        // A GPS fix plus a route lookup takes real seconds.
+                        // Without this the button looks dead and gets tapped
+                        // again, which would start a second voice loop.
+                        ProgressView().tint(.white)
+                    } else {
+                        Text("Start")
+                            .font(.system(size: 30, weight: .bold, design: .rounded))
+                    }
+                }
+                .frame(maxWidth: .infinity, minHeight: 92)
             }
             .buttonStyle(.borderedProminent)
-            .disabled(source == .destination && chosen == nil && FeatureFlags.destinationAndETAEnabled)
+            .disabled(isStarting || (source == .destination && chosen == nil && FeatureFlags.destinationAndETAEnabled))
             .padding(.horizontal, 24)
             .padding(.bottom, 32)
 
@@ -207,6 +217,7 @@ struct StartView: View {
     // MARK: - Actions
 
     private func runSearch() {
+        guard !isSearching else { return }
         status = nil
         isSearching = true
         Task {
@@ -227,8 +238,15 @@ struct StartView: View {
     }
 
     private func begin() {
+        // Belt as well as braces: the button is disabled while starting, but
+        // two engines sharing one audio session would talk over each other.
+        guard !isStarting, engine?.card.isRunning != true else { return }
+        isStarting = true
         status = nil
+
         Task {
+            defer { isStarting = false }
+
             switch await AudioSessionController.requestPermissions() {
             case .deniedSpeech:
                 status = "DriveQuiz needs speech recognition to hear your answers. "
@@ -282,6 +300,8 @@ struct StartView: View {
                 NowPlayingController.shared.activate()
                 newEngine.start()
             } catch {
+                // activate() may have succeeded before a later step failed.
+                audio.deactivate()
                 status = "Could not start: \(error.localizedDescription)"
             }
         }

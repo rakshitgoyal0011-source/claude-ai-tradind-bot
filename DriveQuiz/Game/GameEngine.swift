@@ -73,10 +73,17 @@ final class GameEngine {
 
         audio.onInterruption = { [weak self] ended, mayResume in
             guard let self else { return }
-            if ended {
-                if mayResume { self.clock.resume() }
-            } else {
+            guard ended else {
                 self.clock.pause()
+                return
+            }
+            if mayResume {
+                self.clock.resume()
+            } else {
+                // The system says another app has the audio for good. There
+                // is no way to speak, so ending here beats spinning through
+                // the rest of the pack in silence.
+                self.stop()
             }
         }
 
@@ -100,10 +107,31 @@ final class GameEngine {
 
     // MARK: - Main loop
 
+    /// Holds the loop while a call or Siri owns the audio session.
+    ///
+    /// Without this the loop keeps running: every say and hear returns
+    /// instantly while interrupted, so a two minute call would burn silently
+    /// through every remaining question and the drive would end with a score
+    /// the driver never had a chance to earn.
+    private func awaitInterruptionEnd() async {
+        var waited = 0
+        while audio.state == .interrupted, !stopRequested, !Task.isCancelled {
+            // Ten minutes is longer than any interruption worth waiting out.
+            if waited >= 600 {
+                stop()
+                return
+            }
+            waited += 1
+            try? await Task.sleep(for: .seconds(1))
+        }
+    }
+
     private func run() async {
         await audio.say(introText())
 
         for question in plan.questions {
+            if stopRequested || Task.isCancelled { break }
+            await awaitInterruptionEnd()
             if stopRequested || Task.isCancelled { break }
 
             // Use the live clock, not the plan. A slow round must not push
@@ -148,6 +176,14 @@ final class GameEngine {
         while attempts < 8 {
             attempts += 1
             if stopRequested || Task.isCancelled { return }
+
+            // A call mid-question must not consume the attempt budget in
+            // silence. Wait it out, then repeat the prompt from the top.
+            if audio.state == .interrupted {
+                await awaitInterruptionEnd()
+                if stopRequested || Task.isCancelled { return }
+                needsPrompt = true
+            }
 
             if needsPrompt { await audio.say(question.prompt) }
             needsPrompt = true
@@ -250,6 +286,11 @@ final class GameEngine {
         var idleRounds = 0
 
         while !stopRequested && !Task.isCancelled {
+            // A call during a pause would otherwise spin the idle budget away
+            // in a fraction of a second, since hear returns instantly.
+            await awaitInterruptionEnd()
+            if stopRequested || Task.isCancelled { return }
+
             // An ETA keeps counting down through a pause, so the drive can end
             // while we are still waiting. Come back rather than listening into
             // an empty car park; the main loop will see the clock and wrap up.
