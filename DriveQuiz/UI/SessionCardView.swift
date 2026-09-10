@@ -22,6 +22,12 @@ struct SessionCardView: View {
                 .monospacedDigit()
                 .accessibilityLabel("\(card.score) correct out of \(card.asked)")
 
+            if card.dailyStreak >= 2 {
+                Text("Day \(card.dailyStreak)")
+                    .font(.system(size: 22, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
+            }
+
             if card.isPaused {
                 Text("Paused. Say resume.")
                     .font(.title3)

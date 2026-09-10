@@ -124,4 +124,70 @@ final class PackPlannerTests: XCTestCase {
         XCTAssertEqual(plan.questions.count, 10)
         XCTAssertTrue(plan.ranOutOfQuestions)
     }
+
+    // MARK: - Don't-repeat ordering
+
+    private let now = Date(timeIntervalSince1970: 1_700_000_000)
+    private let day: TimeInterval = 86_400
+
+    func testUnseenQuestionsComeFirst() {
+        let questions = (0..<6).map {
+            Question(id: "q\($0)", prompt: "p", canonicalAnswer: "a",
+                     factOneLiner: "f", estimatedSeconds: 30)
+        }
+        var history = QuestionHistory.empty
+        history.record(["q0", "q1", "q2"], at: now.addingTimeInterval(-1 * day))
+
+        let ordered = PackPlanner.orderByFreshness(
+            questions, history: history, cooldown: 14 * day, now: now
+        )
+        let firstThree = Set(ordered.prefix(3).map(\.id))
+        XCTAssertEqual(firstThree, ["q3", "q4", "q5"])
+    }
+
+    func testPreviouslyAskedComeBackOldestFirst() {
+        let questions = (0..<3).map {
+            Question(id: "q\($0)", prompt: "p", canonicalAnswer: "a",
+                     factOneLiner: "f", estimatedSeconds: 30)
+        }
+        var history = QuestionHistory.empty
+        history.record(["q0"], at: now.addingTimeInterval(-1 * day))
+        history.record(["q1"], at: now.addingTimeInterval(-40 * day))
+        history.record(["q2"], at: now.addingTimeInterval(-20 * day))
+
+        let ordered = PackPlanner.orderByFreshness(
+            questions, history: history, cooldown: 14 * day, now: now
+        )
+        // q1 and q2 are past cooldown, oldest first. q0 is still recent.
+        XCTAssertEqual(ordered.map(\.id), ["q1", "q2", "q0"])
+    }
+
+    func testAShortDrivePicksOnlyFreshQuestions() {
+        let questions = (0..<10).map {
+            Question(id: "q\($0)", prompt: "p", canonicalAnswer: "a",
+                     factOneLiner: "f", estimatedSeconds: 30)
+        }
+        var history = QuestionHistory.empty
+        history.record((0..<8).map { "q\($0)" }, at: now.addingTimeInterval(-1 * day))
+
+        // 180s drive fits 2 questions, and both should be unseen.
+        let plan = PackPlanner.plan(
+            packs: [QuestionPack(id: "p", theme: "T", questions: questions)],
+            availableSeconds: 180,
+            history: history,
+            now: now
+        )
+        XCTAssertEqual(Set(plan.questions.map(\.id)), ["q8", "q9"])
+    }
+
+    func testNoHistoryLeavesTheShuffleAlone() {
+        let questions = (0..<5).map {
+            Question(id: "q\($0)", prompt: "p", canonicalAnswer: "a",
+                     factOneLiner: "f", estimatedSeconds: 30)
+        }
+        let ordered = PackPlanner.orderByFreshness(
+            questions, history: .empty, cooldown: 14 * day, now: now
+        )
+        XCTAssertEqual(ordered.map(\.id), questions.map(\.id))
+    }
 }

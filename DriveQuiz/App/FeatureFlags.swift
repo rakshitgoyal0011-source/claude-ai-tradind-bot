@@ -9,6 +9,7 @@ enum FeatureFlags {
     /// minutes path, which needs no location permission.
     static let destinationAndETAEnabled = true
 
-    /// Phase 3 turns on persistence and the daily streak.
-    static let persistenceEnabled = false
+    /// Phase 3: local progress, daily streak, don't-repeat questions.
+    /// Turn off to play from a clean slate every drive.
+    static let persistenceEnabled = true
 }

@@ -15,6 +15,11 @@ final class GameEngine {
     private let clock: SessionClock
     private var session: Session
     private let plan: SessionPlan
+    private let store: ProgressStoring?
+    private var progress: PlayerProgress
+    /// Recorded so these questions are not asked again on the next drive.
+    private var askedIDs: [String] = []
+    private var progressWritten = false
 
     private var loopTask: Task<Void, Never>?
     private var stopRequested = false
@@ -25,12 +30,35 @@ final class GameEngine {
     /// While paused we deliberately hear almost nothing.
     private let pausedCommands: Set<VoiceCommand> = [.resume, .stop]
 
-    init(audio: AudioSessionController, clock: SessionClock, plan: SessionPlan) {
+    init(
+        audio: AudioSessionController,
+        clock: SessionClock,
+        plan: SessionPlan,
+        store: ProgressStoring? = nil,
+        progress: PlayerProgress = .fresh
+    ) {
         self.audio = audio
         self.clock = clock
         self.plan = plan
+        self.store = store
+        self.progress = progress
         self.session = Session(plannedDuration: plan.plannedDuration)
         self.card.sessionName = plan.theme
+        self.card.dailyStreak = progress.daily.current
+    }
+
+    /// Writes the drive to disk. Idempotent, because both the natural ending
+    /// and the stop button route through it.
+    private func persistProgress() {
+        guard !progressWritten, session.asked > 0 else { return }
+        progressWritten = true
+        progress.recordSession(
+            askedIDs: askedIDs,
+            asked: session.asked,
+            correct: session.correct
+        )
+        card.dailyStreak = progress.daily.current
+        store?.save(progress)
     }
 
     // MARK: - Lifecycle
@@ -58,6 +86,7 @@ final class GameEngine {
         stopRequested = true
         loopTask?.cancel()
         loopTask = nil
+        persistProgress()
         clock.stop()
         audio.deactivate()
         card.isRunning = false
@@ -90,6 +119,7 @@ final class GameEngine {
     }
 
     private func finish() async {
+        persistProgress()
         let summary = summaryText(interrupted: false)
         await audio.say(summary)
         phase = .finished(summary: summary)
@@ -101,6 +131,10 @@ final class GameEngine {
     // MARK: - One question
 
     private func ask(_ question: Question) async {
+        guard !stopRequested, !Task.isCancelled else { return }
+        // Marked seen from here on, so the next drive does not repeat it.
+        askedIDs.append(question.id)
+
         var nudged = false
         var attempts = 0
 
@@ -211,6 +245,7 @@ final class GameEngine {
     }
 
     private func finishEarly() async {
+        persistProgress()
         let summary = summaryText(interrupted: true)
         await audio.say(summary)
         phase = .finished(summary: summary)
@@ -238,7 +273,12 @@ final class GameEngine {
             opener = "\(plan.theme). About \(minutes) minutes to your destination. "
                 + "I will wrap up as you arrive."
         }
-        return opener + " Say repeat, skip, pause, or stop at any time. Here is the first one."
+        var line = opener
+        let projected = progress.daily.projectedCurrent(on: Date())
+        if projected >= 2 {
+            line += " Day \(projected) in a row."
+        }
+        return line + " Say repeat, skip, pause, or stop at any time. Here is the first one."
     }
 
     private func correctText() -> String {
@@ -289,6 +329,9 @@ final class GameEngine {
         }
         if plan.ranOutOfQuestions {
             parts.append("We used every question in the pack.")
+        }
+        if progress.daily.current >= 2 {
+            parts.append("That is \(progress.daily.current) days in a row.")
         }
         parts.append("See you tomorrow.")
         return parts.joined(separator: " ")

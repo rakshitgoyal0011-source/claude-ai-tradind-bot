@@ -8,6 +8,8 @@ struct CardState: Equatable {
     var asked: Int = 0
     var isRunning: Bool = false
     var isPaused: Bool = false
+    /// Consecutive days played, shown only when it is worth showing.
+    var dailyStreak: Int = 0
 
     var scoreLine: String { "\(score) of \(asked)" }
 }

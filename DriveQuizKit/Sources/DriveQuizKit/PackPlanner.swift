@@ -33,11 +33,17 @@ public enum PackPlanner {
     ///   changing the drive length. An ETA can stretch in traffic, so plan
     ///   past it and let the live clock decide when to stop. The plan is a
     ///   queue, not a promise.
+    /// - Parameter history: what this driver has already been asked. Fresh
+    ///   questions are always preferred; previously asked ones come back only
+    ///   once the unseen pool is exhausted, oldest first.
     public static func plan(
         packs: [QuestionPack],
         availableSeconds: TimeInterval,
         mode: SessionMode = .manualMinutes,
         contingency: Double = 1.0,
+        history: QuestionHistory = .empty,
+        cooldown: TimeInterval = PlayerProgress.defaultCooldown,
+        now: Date = Date(),
         seed: UInt64 = 0
     ) -> SessionPlan {
         let theme = packs.count == 1 ? (packs.first?.theme ?? "Mixed") : "Mixed"
@@ -58,7 +64,12 @@ public enum PackPlanner {
         }
 
         var generator = SeededGenerator(seed: seed)
-        let pool = packs.flatMap(\.questions).shuffled(using: &generator)
+        let pool = orderByFreshness(
+            packs.flatMap(\.questions).shuffled(using: &generator),
+            history: history,
+            cooldown: cooldown,
+            now: now
+        )
 
         var chosen: [Question] = []
         var used: TimeInterval = 0
@@ -80,6 +91,31 @@ public enum PackPlanner {
             estimatedContentSeconds: used,
             ranOutOfQuestions: ranOut
         )
+    }
+
+    /// Unseen questions first in shuffled order, then previously asked ones
+    /// oldest first. The incoming order breaks ties, so a caller that shuffled
+    /// with a seed still gets a deterministic result.
+    static func orderByFreshness(
+        _ questions: [Question],
+        history: QuestionHistory,
+        cooldown: TimeInterval,
+        now: Date
+    ) -> [Question] {
+        questions
+            .enumerated()
+            .map { index, question -> (rank: Int, seenAt: TimeInterval, tie: Int, question: Question) in
+                let rank = history.freshnessRank(for: question.id, now: now, cooldown: cooldown)
+                // Unseen questions share a key so the shuffle alone orders them.
+                let seenAt = history.lastAsked(for: question.id)?.timeIntervalSince1970 ?? 0
+                return (rank, seenAt, index, question)
+            }
+            .sorted {
+                if $0.rank != $1.rank { return $0.rank < $1.rank }
+                if $0.seenAt != $1.seenAt { return $0.seenAt < $1.seenAt }
+                return $0.tie < $1.tie
+            }
+            .map(\.question)
     }
 
     /// Gate checked before every question, using the live clock rather than

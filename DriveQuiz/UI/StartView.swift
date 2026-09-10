@@ -22,6 +22,7 @@ struct StartView: View {
     @State private var engine: GameEngine?
     @State private var audio = AudioSessionController()
     @State private var locations = LocationProvider()
+    @State private var store = FileProgressStore()
 
     private let search = DestinationSearch()
     private let etaProvider = ETAProvider()
@@ -204,6 +205,7 @@ struct StartView: View {
             do {
                 let pack = try PackLoader.load()
                 let (clock, seconds, mode) = try await makeClock()
+                let progress = FeatureFlags.persistenceEnabled ? store.load() : .fresh
 
                 try audio.activate()
 
@@ -214,6 +216,8 @@ struct StartView: View {
                     // Traffic stretches an ETA. Queue past it and let the
                     // live clock decide when to stop.
                     contingency: mode == .estimatedArrival ? 1.3 : 1.0,
+                    // Prefer questions this driver has not heard before.
+                    history: progress.history,
                     seed: UInt64(Date().timeIntervalSince1970)
                 )
 
@@ -223,7 +227,13 @@ struct StartView: View {
                     return
                 }
 
-                let newEngine = GameEngine(audio: audio, clock: clock, plan: plan)
+                let newEngine = GameEngine(
+                    audio: audio,
+                    clock: clock,
+                    plan: plan,
+                    store: FeatureFlags.persistenceEnabled ? store : nil,
+                    progress: progress
+                )
                 engine = newEngine
                 newEngine.start()
             } catch {

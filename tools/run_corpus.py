@@ -100,6 +100,61 @@ ok(eta_should_wrap_up(600, 511) is True, "89 seconds out is wrap-up")
 ok(eta_replacing(600, 0) == 600, "failed refresh keeps the good estimate")
 ok(eta_replacing(600, 900) == 900, "traffic refresh replaces the estimate")
 
+from grader_reference import (streak_record, streak_projected, streak_at_risk,
+                              freshness_rank, order_by_freshness, prune, DAY)
+
+# --- daily streak transitions
+# 2023-11-14 09:00:00 UTC. Anchored mid-morning so an eight hour
+# offset stays inside the same calendar day.
+D1 = 1_699_952_400.0
+FRESH = (0, 0, None)
+
+s1 = streak_record(FRESH, D1)
+ok(s1[:2] == (1, 1), "first play starts at one")
+
+s2 = streak_record(s1, D1 + DAY)
+s3 = streak_record(s2, D1 + 2 * DAY)
+ok(s3[:2] == (3, 3), "three consecutive days build to three")
+
+ok(streak_record(s1, D1 + 8 * 3600)[:2] == (1, 1), "second drive same day is a no-op")
+
+s4 = streak_record(s3, D1 + 4 * DAY)
+ok(s4[:2] == (1, 3), "missed day resets current but keeps best")
+
+back = streak_record(streak_record(FRESH, D1 + 3 * DAY), D1)
+ok(back[:2] == (1, 1), "clock moving backwards does not corrupt the streak")
+ok(back[2] == streak_record(FRESH, D1 + 3 * DAY)[2], "backwards clock keeps last played")
+
+# --- projection and risk
+ok(streak_projected(FRESH, D1) == 1, "projection with no history is one")
+ok(streak_projected(s1, D1) == 1, "playing again today does not advance")
+ok(streak_projected(s1, D1 + DAY) == 2, "tomorrow advances to two")
+ok(streak_projected(s1, D1 + 5 * DAY) == 1, "a gap projects back to one")
+ok(streak_at_risk(s1, D1) is False, "same day is not at risk")
+ok(streak_at_risk(s1, D1 + DAY) is True, "one day later is at risk")
+ok(streak_at_risk(s1, D1 + 3 * DAY) is False, "already broken is not at risk")
+
+# --- question freshness
+COOLDOWN = 14 * DAY
+seen = {"recent": D1 - 2 * DAY, "stale": D1 - 30 * DAY}
+ok(freshness_rank(seen, "unseen", D1, COOLDOWN) == 0, "unseen ranks first")
+ok(freshness_rank(seen, "stale", D1, COOLDOWN) == 1, "past cooldown ranks second")
+ok(freshness_rank(seen, "recent", D1, COOLDOWN) == 2, "recently asked ranks last")
+
+hist = {"q0": D1 - 1 * DAY, "q1": D1 - 1 * DAY, "q2": D1 - 1 * DAY}
+order = order_by_freshness(["q0", "q1", "q2", "q3", "q4", "q5"], hist, COOLDOWN, D1)
+ok(set(order[:3]) == {"q3", "q4", "q5"}, "unseen questions come first")
+
+hist2 = {"q0": D1 - 1 * DAY, "q1": D1 - 40 * DAY, "q2": D1 - 20 * DAY}
+ok(order_by_freshness(["q0", "q1", "q2"], hist2, COOLDOWN, D1) == ["q1", "q2", "q0"],
+   "previously asked come back oldest first")
+
+ok(order_by_freshness(["q0", "q1", "q2"], {}, COOLDOWN, D1) == ["q0", "q1", "q2"],
+   "no history leaves the incoming shuffle alone")
+
+pruned = prune({"old": D1 - 200 * DAY, "new": D1 - 1 * DAY}, 120 * DAY, D1)
+ok("old" not in pruned and "new" in pruned, "prune drops only old entries")
+
 print(f"{'FAIL' if fails else 'PASS'}: {checks - len(fails)}/{checks} cases")
 for f in fails:
     print("  -", f)

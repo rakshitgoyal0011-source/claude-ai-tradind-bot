@@ -207,3 +207,78 @@ def eta_should_wrap_up(seconds, elapsed, threshold=WRAP_UP_THRESHOLD):
 
 def eta_replacing(current_seconds, fresh_seconds):
     return fresh_seconds if fresh_seconds > 0 else current_seconds
+
+
+# ---------------------------------------------------------------------------
+# DailyStreak, QuestionHistory and freshness ordering mirrors.
+#
+# Day arithmetic here uses whole 86400-second steps, which matches the Swift
+# only for a fixed-offset calendar. The Swift uses Calendar so it also handles
+# daylight saving; those cases are XCTest-only.
+# ---------------------------------------------------------------------------
+
+DAY = 86400.0
+
+
+def _start_of_day(ts):
+    return ts - (ts % DAY)
+
+
+def streak_record(state, play_ts):
+    """state = (current, best, last_played_or_None). Returns a new state."""
+    current, best, last = state
+    today = _start_of_day(play_ts)
+
+    if last is None:
+        return (1, max(best, 1), today)
+
+    gap = int(round((today - last) / DAY))
+    if gap == 0:
+        return state
+    if gap == 1:
+        current += 1
+    elif gap > 1:
+        current = 1
+    else:
+        return state
+    return (current, max(best, current), today)
+
+
+def streak_projected(state, on_ts):
+    current, _, last = state
+    if last is None or current <= 0:
+        return 1
+    gap = int(round((_start_of_day(on_ts) - last) / DAY))
+    if gap == 0:
+        return current
+    if gap == 1:
+        return current + 1
+    if gap > 1:
+        return 1
+    return current
+
+
+def streak_at_risk(state, on_ts):
+    current, _, last = state
+    if last is None or current <= 0:
+        return False
+    return int(round((_start_of_day(on_ts) - last) / DAY)) == 1
+
+
+def freshness_rank(last_asked, qid, now, cooldown):
+    if qid not in last_asked:
+        return 0
+    return 1 if (now - last_asked[qid]) >= cooldown else 2
+
+
+def order_by_freshness(ids, last_asked, cooldown, now):
+    keyed = []
+    for index, qid in enumerate(ids):
+        rank = freshness_rank(last_asked, qid, now, cooldown)
+        seen_at = last_asked.get(qid, 0)
+        keyed.append((rank, seen_at, index, qid))
+    return [qid for _, _, _, qid in sorted(keyed)]
+
+
+def prune(last_asked, window, now):
+    return {k: v for k, v in last_asked.items() if (now - v) < window}
