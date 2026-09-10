@@ -46,7 +46,8 @@ scripts/bootstrap.sh             Generates DriveQuiz.xcodeproj from it
 CLAUDE.md                        Invariants a change must not break
 
 tools/
-  verify.sh                      Runs everything that can actually execute here
+  verify.py                      Same checks, any platform, including Windows
+  verify.sh                      Same, for shells
   grader_reference.py            Python mirror of the pure logic
   run_corpus.py                  117-case logic corpus against the mirror
   validate_packs.py              Content checks against the real normalizer
@@ -182,7 +183,34 @@ GPS, a real route, or a real car.
 
 ## Getting it into Xcode
 
-One command, on a Mac:
+### If you are on Windows
+
+You cannot build an iOS app on Windows. Xcode is macOS only, and that is
+Apple's restriction rather than a gap in the tooling. There is no legitimate
+workaround. Three real options, cheapest first:
+
+1. **GitHub Actions**, already set up in `.github/workflows/ci.yml`. Every
+   push gets a macOS runner that compiles the app and runs the package tests.
+   Free for public repositories; private ones bill macOS minutes at ten times
+   the rate. This gives you a compiler, which this project has never had. It
+   does not give you a car, or a microphone, or an ear.
+2. **A rented Mac** (MacinCloud, MacStadium, AWS EC2 Mac). Hourly or monthly.
+   Enough to run a simulator and to submit builds.
+3. **A used Mac mini.** The cheapest way to own the whole loop, and the only
+   one that makes the day-to-day tolerable if you keep working on this.
+
+Shipping to a physical iPhone, or to TestFlight, needs a Mac plus an Apple
+Developer account at 99 USD a year. There is no path around either.
+
+Meanwhile the logic and content checks run fine on Windows:
+
+```
+python tools\verify.py
+```
+
+### On a Mac
+
+One command:
 
 ```sh
 ./scripts/bootstrap.sh      # needs: brew install xcodegen

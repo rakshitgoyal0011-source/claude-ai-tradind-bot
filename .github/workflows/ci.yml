@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  # Runs anywhere. No Swift needed, so it is the fast feedback loop.
+  logic:
+    name: Logic and content checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Verify
+        run: python tools/verify.py
+
+  # The whole point of this file: a compiler, which this project has never
+  # had. Expect the first run to fail with real errors.
+  build:
+    name: Build and test on macOS
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: swift --version && xcodebuild -version
+
+      - name: Package tests
+        run: swift test --package-path DriveQuizKit
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate project
+        run: xcodegen generate
+
+      - name: Build app for simulator
+        # Simulator destination plus CODE_SIGNING_ALLOWED=NO means this needs
+        # no Apple account and no certificates.
+        run: |
+          xcodebuild build \
+            -project DriveQuiz.xcodeproj \
+            -scheme DriveQuiz \
+            -destination 'generic/platform=iOS Simulator' \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO

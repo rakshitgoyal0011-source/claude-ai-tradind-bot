@@ -7,8 +7,13 @@ Voice-only trivia sized to a drive. iOS 17+, SwiftUI, Swift 5.9.
 ```sh
 ./scripts/bootstrap.sh          # project.yml -> DriveQuiz.xcodeproj (needs xcodegen)
 cd DriveQuizKit && swift test   # the logic tests, fastest signal
-./tools/verify.sh               # runs on any machine, no Swift needed
+python tools/verify.py          # any machine, no Swift needed, works on Windows
 ```
+
+**The maintainer is on Windows and has no Mac.** iOS cannot be built there, so
+`.github/workflows/ci.yml` runs the compiler on a macOS runner for every push.
+Treat CI as the build, and never assume a change compiles because it looks
+right. Nothing in this repo has been run on a device.
 
 `tools/` holds a Python mirror of the pure logic. It exists because the
 container this was written in has no Swift toolchain, and it is kept in sync
