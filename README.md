@@ -43,8 +43,9 @@ DriveQuiz/                       App sources
 tools/
   verify.sh                      Runs everything that can actually execute here
   grader_reference.py            Python mirror of the pure logic
-  run_corpus.py                  92-case corpus against the mirror
+  run_corpus.py                  92-case logic corpus against the mirror
   validate_packs.py              Content checks against the real normalizer
+  run_content_cases.py           Real spoken answers against shipped questions
 ```
 
 ## Assumptions I made
@@ -87,8 +88,9 @@ calls I made. Each is a one-line change if you disagree.
 ./tools/verify.sh
 ```
 
-That is a 92-case logic corpus and a content check over all 100 questions,
-both currently clean. No Swift toolchain is reachable in the build container,
+That is a 92-case logic corpus, a content check over all 100 questions, and 38
+cases grading realistic spoken answers against the questions actually shipped,
+which is the check that decides whether the game is any fun. All three clean. No Swift toolchain is reachable in the build container,
 so `tools/grader_reference.py` is a hand-maintained Python port of the same
 rules and the corpus runs against it.
 
@@ -121,6 +123,22 @@ The seeded shuffle is deliberately **not** mirrored, because Swift's
 `shuffled(using:)` index derivation is an implementation detail. Every planner
 case uses equal-length questions, so selection counts stay order independent.
 Seed determinism is covered by XCTest only.
+
+**Reviewed, not compiled.** A line-by-line review of the whole app target
+found seven defects, all fixed:
+
+| Defect | Consequence |
+|---|---|
+| `SessionClock` was not main-actor isolated while `ETAClock` is | Would not compile at all |
+| `observers.forEach(NotificationCenter.default.removeObserver)` | Ambiguous overload, would not compile |
+| A stale speech callback resumed the newest continuation | The microphone could open while still speaking |
+| `installTap` with a zero sample rate format | Objective-C exception, a crash rather than an error |
+| A superseded listen tore down its replacement's engine | Recognition dies mid-question |
+| Spending the attempt budget returned with no score and no audio | The question vanishes in silence |
+| The pause loop had no exit if resume was never heard | Driver trapped, and on an ETA drive arrives with the app still listening |
+
+The rate constant was also wrong: 0.5 is `AVSpeechUtteranceDefaultSpeechRate`,
+so the comment claiming it was slower than default was false. It is 0.46 now.
 
 **Not verified.** Nothing has been compiled. There is no Swift toolchain and no
 Xcode in the container, and `download.swift.org` is blocked by the proxy.

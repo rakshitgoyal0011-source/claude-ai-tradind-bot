@@ -139,14 +139,19 @@ final class GameEngine {
 
         var nudged = false
         var attempts = 0
+        var needsPrompt = true
 
         // Bounded so a recognizer that keeps failing cannot trap the driver
-        // on one question for the rest of the drive.
-        while attempts < 6 {
+        // on one question for the rest of the drive. Repeats and status
+        // questions spend from the same budget, which is why running out has
+        // to end in a spoken outcome rather than silence.
+        while attempts < 8 {
             attempts += 1
             if stopRequested || Task.isCancelled { return }
 
-            await audio.say(question.prompt)
+            if needsPrompt { await audio.say(question.prompt) }
+            needsPrompt = true
+
             let heard = await audio.hear(timeout: 8, hints: question.recognitionHints)
 
             if let command = takeCommand(from: heard, allowing: inGameCommands) {
@@ -163,6 +168,12 @@ final class GameEngine {
                 case .pause:
                     await runPause()
                     if stopRequested { return }
+                    // A long pause can eat the rest of an ETA drive. Hand
+                    // back to the main loop, which will wrap up.
+                    guard PackPlanner.shouldStartNextQuestion(
+                        remainingSeconds: clock.remainingSeconds,
+                        question: question
+                    ) else { return }
                     continue
 
                 case .howManyLeft:
@@ -184,9 +195,11 @@ final class GameEngine {
             switch verdict {
             case .noSpeech where !nudged:
                 // One nudge, then move on. Repeating forever is worse than
-                // losing a question.
+                // losing a question. The prompt is not repeated: they heard
+                // it, they just did not answer.
                 nudged = true
-                await audio.say("I did not catch that. Take a guess, or say skip.")
+                needsPrompt = false
+                await audio.say("Still there? Take a guess, or say skip.")
                 continue
 
             case .noSpeech:
@@ -210,6 +223,14 @@ final class GameEngine {
                 return
             }
         }
+
+        // Attempt budget spent. Never drop a question in silence: that reads
+        // as the app having died, which is the worst thing it can do to
+        // someone who cannot look at the screen.
+        guard !stopRequested, !Task.isCancelled else { return }
+        session.recordSkipped()
+        refreshCard()
+        await audio.say("Let us move on. The answer was \(question.canonicalAnswer).")
     }
 
     // MARK: - Pause
@@ -224,7 +245,30 @@ final class GameEngine {
         card.isPaused = true
         await audio.say("Paused. Say resume when you are ready.")
 
+        // Roughly five minutes of listening to nothing.
+        let maxIdleRounds = 25
+        var idleRounds = 0
+
         while !stopRequested && !Task.isCancelled {
+            // An ETA keeps counting down through a pause, so the drive can end
+            // while we are still waiting. Come back rather than listening into
+            // an empty car park; the main loop will see the clock and wrap up.
+            if clock.remainingSeconds < PackPlanner.wrapUpThreshold {
+                clock.resume()
+                phase = .running
+                card.isPaused = false
+                return
+            }
+
+            // A manual clock is frozen while paused, so it will never end the
+            // pause on its own. Without this cap the driver is stuck.
+            if idleRounds >= maxIdleRounds {
+                stopRequested = true
+                await finishEarly()
+                return
+            }
+            idleRounds += 1
+
             let heard = await audio.hear(timeout: 12, hints: ["resume", "stop"])
             guard let command = takeCommand(from: heard, allowing: pausedCommands)
             else { continue }

@@ -69,7 +69,7 @@ final class AudioSessionController {
     func deactivate() {
         speaker.stop()
         listener.cancel()
-        observers.forEach(NotificationCenter.default.removeObserver)
+        observers.forEach { NotificationCenter.default.removeObserver($0) }
         observers.removeAll()
         // Let music come back cleanly instead of staying ducked.
         try? AVAudioSession.sharedInstance()

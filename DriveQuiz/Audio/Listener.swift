@@ -17,12 +17,18 @@ struct Transcript: Equatable {
 
 enum ListenerError: Error {
     case recognizerUnavailable
+    /// The input node reported no usable format, usually because the audio
+    /// session is not active yet. Installing a tap with it throws an
+    /// Objective-C exception, which would be a crash rather than an error.
+    case inputUnavailable
     case engineFailed(Error)
 }
 
 /// Collects partial results and decides when the driver has stopped talking.
 @MainActor
 private final class ListenCollector {
+    /// Identifies this listen so a stale completion cannot tear down a newer one.
+    let id = UUID()
     private var candidates: [String] = []
     private var completed = false
     private var timeoutTask: Task<Void, Never>?
@@ -115,6 +121,9 @@ final class Listener {
 
         let input = engine.inputNode
         let format = input.outputFormat(forBus: 0)
+        guard format.sampleRate > 0, format.channelCount > 0 else {
+            throw ListenerError.inputUnavailable
+        }
         input.removeTap(onBus: 0)
         input.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
             request.append(buffer)
@@ -131,10 +140,17 @@ final class Listener {
         let collector = ListenCollector(timeout: timeout, silenceCutoff: silenceCutoff)
         self.collector = collector
 
+        let token = collector.id
+
         return await withCheckedContinuation { continuation in
             collector.onComplete = { [weak self] candidates in
-                self?.collector = nil
-                self?.teardown()
+                // Only tear down if this is still the current listen. A late
+                // completion from a superseded one must not stop the engine
+                // out from under its replacement.
+                if let self, self.collector?.id == token {
+                    self.collector = nil
+                    self.teardown()
+                }
                 continuation.resume(returning: Transcript(candidates: candidates))
             }
 

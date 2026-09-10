@@ -74,6 +74,10 @@ public enum PackPlanner {
         var chosen: [Question] = []
         var used: TimeInterval = 0
 
+        // Deliberately keeps scanning past a question that does not fit, so a
+        // short one later can use up the remaining budget. That can admit a
+        // stale question ahead of a longer fresh one at the very tail, which
+        // is a better trade than leaving the driver in silence.
         for question in pool where used + question.estimatedSeconds <= budget {
             chosen.append(question)
             used += question.estimatedSeconds

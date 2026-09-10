@@ -8,9 +8,14 @@ final class Speaker: NSObject {
 
     private let synthesizer = AVSpeechSynthesizer()
     private var pending: CheckedContinuation<Void, Never>?
+    /// Which utterance the pending continuation belongs to. A delegate
+    /// callback for anything else is stale and must be ignored, or it would
+    /// resume a later utterance that has not finished speaking.
+    private var pendingUtterance: AVSpeechUtterance?
 
-    /// Slightly slower than default. Road noise eats consonants.
-    var rate: Float = 0.50
+    /// Below AVSpeechUtteranceDefaultSpeechRate, which is 0.5.
+    /// Road noise eats consonants.
+    var rate: Float = 0.46
     var voiceLanguage = "en-US"
 
     override init() {
@@ -26,12 +31,14 @@ final class Speaker: NSObject {
 
         resumePending()
 
+        let utterance = AVSpeechUtterance(string: trimmed)
+        utterance.rate = rate
+        utterance.postUtteranceDelay = 0.1
+        utterance.voice = AVSpeechSynthesisVoice(language: voiceLanguage)
+
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             pending = continuation
-            let utterance = AVSpeechUtterance(string: trimmed)
-            utterance.rate = rate
-            utterance.postUtteranceDelay = 0.1
-            utterance.voice = AVSpeechSynthesisVoice(language: voiceLanguage)
+            pendingUtterance = utterance
             synthesizer.speak(utterance)
         }
     }
@@ -45,7 +52,13 @@ final class Speaker: NSObject {
     private func resumePending() {
         guard let continuation = pending else { return }
         pending = nil
+        pendingUtterance = nil
         continuation.resume()
+    }
+
+    private func finished(_ utterance: AVSpeechUtterance) {
+        guard pendingUtterance === utterance else { return }
+        resumePending()
     }
 }
 
@@ -55,13 +68,13 @@ extension Speaker: AVSpeechSynthesizerDelegate {
         _ synthesizer: AVSpeechSynthesizer,
         didFinish utterance: AVSpeechUtterance
     ) {
-        Task { @MainActor in self.resumePending() }
+        Task { @MainActor in self.finished(utterance) }
     }
 
     nonisolated func speechSynthesizer(
         _ synthesizer: AVSpeechSynthesizer,
         didCancel utterance: AVSpeechUtterance
     ) {
-        Task { @MainActor in self.resumePending() }
+        Task { @MainActor in self.finished(utterance) }
     }
 }

@@ -11,3 +11,6 @@ python3 run_corpus.py
 echo
 echo "--- question packs ---"
 python3 validate_packs.py
+echo
+echo "--- real answers against shipped questions ---"
+python3 run_content_cases.py

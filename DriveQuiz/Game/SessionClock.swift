@@ -3,6 +3,10 @@ import Foundation
 /// How much drive is left. Phase 1 counts down a number the driver typed.
 /// Phase 2 swaps in a MapKit ETA behind the same protocol without the game
 /// loop changing at all.
+///
+/// Main-actor isolated because ETAClock is: a main-actor class cannot satisfy
+/// a nonisolated protocol requirement, so the protocol has to agree.
+@MainActor
 protocol SessionClock: AnyObject {
     var remainingSeconds: TimeInterval { get }
     var elapsedSeconds: TimeInterval { get }
@@ -13,6 +17,7 @@ protocol SessionClock: AnyObject {
     func stop()
 }
 
+@MainActor
 final class ManualClock: SessionClock {
 
     private let total: TimeInterval
