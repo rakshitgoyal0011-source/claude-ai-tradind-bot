@@ -25,6 +25,7 @@ public enum CommandMatcher {
             ["how", "far", "along"]
         ]),
         (.repeatQuestion, [
+            ["can", "you", "repeat", "that"],
             ["can", "you", "repeat"],
             ["say", "that", "again"],
             ["say", "again"],
@@ -48,6 +49,7 @@ public enum CommandMatcher {
             ["next", "question"],
             ["i", "dont", "know"],
             ["no", "idea"],
+            ["skip", "this", "one"],
             ["skip", "this"],
             ["skip", "it"],
             ["dunno"],
@@ -72,31 +74,43 @@ public enum CommandMatcher {
         ])
     ]
 
-    /// A single-word command must lead the utterance, so "the answer is a
-    /// stop sign" is graded as an answer rather than obeyed as a command.
-    /// Multi-word phrases are distinctive enough to match anywhere.
+    /// How many words may trail a command before it stops counting as one.
+    ///
+    /// A command must lead the utterance, so "the answer is a stop sign" is
+    /// graded rather than obeyed. The trailing budget is what stops a command
+    /// swallowing an answer that follows it, and it is tightest where being
+    /// wrong costs most:
+    ///
+    /// - stop ends the drive, so it must be said and nothing else.
+    /// - skip throws away whatever guess came after it, so "I don't know,
+    ///   maybe Napoleon" is graded instead of skipped.
+    /// - the rest are recoverable, and a driver saying "hold on a second"
+    ///   plainly means it.
+    static func trailingBudget(for command: VoiceCommand) -> Int {
+        switch command {
+        case .stop, .skip: return 0
+        case .pause, .repeatQuestion, .howManyLeft, .resume: return 2
+        }
+    }
+
     public static func command(in raw: String, allowing allowed: Set<VoiceCommand>? = nil) -> VoiceCommand? {
         let tokens = TextNormalizer.commandTokens(raw)
         guard !tokens.isEmpty else { return nil }
 
         for (command, variants) in phrases {
             if let allowed, !allowed.contains(command) { continue }
-            for phrase in variants where matches(tokens: tokens, phrase: phrase) {
+            let budget = trailingBudget(for: command)
+            for phrase in variants
+            where matches(tokens: tokens, phrase: phrase, trailingBudget: budget) {
                 return command
             }
         }
         return nil
     }
 
-    static func matches(tokens: [String], phrase: [String]) -> Bool {
+    static func matches(tokens: [String], phrase: [String], trailingBudget: Int) -> Bool {
         guard phrase.count <= tokens.count else { return false }
-
-        if Array(tokens.prefix(phrase.count)) == phrase { return true }
-        guard phrase.count >= 2 else { return false }
-
-        for start in 0...(tokens.count - phrase.count) {
-            if Array(tokens[start..<(start + phrase.count)]) == phrase { return true }
-        }
-        return false
+        guard tokens.count - phrase.count <= trailingBudget else { return false }
+        return Array(tokens.prefix(phrase.count)) == phrase
     }
 }

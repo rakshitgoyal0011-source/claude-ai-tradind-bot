@@ -41,4 +41,34 @@ final class CommandMatcherTests: XCTestCase {
         XCTAssertNil(CommandMatcher.command(in: ""))
         XCTAssertNil(CommandMatcher.command(in: "   "))
     }
+
+    // MARK: - Trailing budget
+
+    func testStopMustBeSaidAndNothingElse() {
+        // Ending the drive by accident is the worst false positive available.
+        XCTAssertEqual(CommandMatcher.command(in: "stop"), .stop)
+        XCTAssertEqual(CommandMatcher.command(in: "stop the game"), .stop)
+        XCTAssertEqual(CommandMatcher.command(in: "that's enough"), .stop)
+        XCTAssertNil(CommandMatcher.command(in: "I'm done thinking, it's Napoleon"))
+        XCTAssertNil(CommandMatcher.command(in: "that's enough, it's Rome"))
+    }
+
+    func testSkipDoesNotSwallowTheGuessAfterIt() {
+        XCTAssertEqual(CommandMatcher.command(in: "I don't know"), .skip)
+        XCTAssertEqual(CommandMatcher.command(in: "skip this one"), .skip)
+        // The guess is the point. Grade it rather than skipping.
+        XCTAssertNil(CommandMatcher.command(in: "I don't know, maybe Napoleon"))
+    }
+
+    func testRecoverableCommandsGetSomeSlack() {
+        XCTAssertEqual(CommandMatcher.command(in: "hold on"), .pause)
+        XCTAssertEqual(CommandMatcher.command(in: "hold on a second"), .pause)
+        // Three trailing words is an answer, not a pause.
+        XCTAssertNil(CommandMatcher.command(in: "hold on, is it Rome"))
+    }
+
+    func testCommandsMustLeadTheUtterance() {
+        XCTAssertNil(CommandMatcher.command(in: "the answer is a stop sign"))
+        XCTAssertNil(CommandMatcher.command(in: "I think it's a mountain pass"))
+    }
 }

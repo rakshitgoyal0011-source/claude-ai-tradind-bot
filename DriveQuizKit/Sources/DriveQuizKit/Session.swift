@@ -33,6 +33,4 @@ public struct Session: Sendable, Equatable {
         asked += 1
         streak = 0
     }
-
-    public var remainingStreakIsHot: Bool { streak >= 3 }
 }

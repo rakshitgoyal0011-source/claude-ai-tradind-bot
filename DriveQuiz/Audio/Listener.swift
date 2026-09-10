@@ -95,7 +95,6 @@ final class Listener {
 
     /// False until the locale's on-device model has downloaded.
     var supportsOnDevice: Bool { recognizer?.supportsOnDeviceRecognition ?? false }
-    var isAvailable: Bool { recognizer?.isAvailable ?? false }
 
     /// - Parameter hints: the accepted answers for this question. Biasing the
     ///   recognizer toward them is the single largest accuracy win available,

@@ -40,6 +40,29 @@ public struct Question: Codable, Identifiable, Sendable, Equatable {
         self.editTolerance = editTolerance
     }
 
+    private enum CodingKeys: String, CodingKey {
+        case id, prompt, canonicalAnswer, alternates, factOneLiner
+        case difficulty, estimatedSeconds, editTolerance
+    }
+
+    /// Decodes leniently on everything that has a sensible default.
+    ///
+    /// Packs are hand-authored JSON, and PackLoader skips a pack it cannot
+    /// parse. Making `alternates` a required key would let one missing line
+    /// silently cost the driver twenty questions.
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        prompt = try container.decode(String.self, forKey: .prompt)
+        canonicalAnswer = try container.decode(String.self, forKey: .canonicalAnswer)
+        factOneLiner = try container.decode(String.self, forKey: .factOneLiner)
+        alternates = try container.decodeIfPresent([String].self, forKey: .alternates) ?? []
+        difficulty = try container.decodeIfPresent(Difficulty.self, forKey: .difficulty) ?? .medium
+        estimatedSeconds = try container
+            .decodeIfPresent(TimeInterval.self, forKey: .estimatedSeconds) ?? 30
+        editTolerance = try container.decodeIfPresent(Int.self, forKey: .editTolerance)
+    }
+
     /// Canonical plus alternates, in grading order.
     public var acceptedAnswers: [String] { [canonicalAnswer] + alternates }
 

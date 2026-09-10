@@ -125,12 +125,12 @@ PHRASES = [
     ("howManyLeft", [["how","many","questions","left"],["how","many","are","left"],
                      ["how","many","more"],["how","many","left"],["how","much","longer"],
                      ["how","much","time"],["how","long","left"],["how","far","along"]]),
-    ("repeatQuestion", [["can","you","repeat"],["say","that","again"],["say","again"],
+    ("repeatQuestion", [["can","you","repeat","that"],["can","you","repeat"],["say","that","again"],["say","again"],
                         ["one","more","time"],["what","was","that"],["come","again"],
                         ["repeat","that"],["repeat"]]),
     ("resume", [["keep","going"],["start","again"],["carry","on"],["go","on"],
                 ["im","back"],["unpause"],["resume"],["continue"]]),
-    ("skip", [["next","question"],["i","dont","know"],["no","idea"],["skip","this"],
+    ("skip", [["next","question"],["i","dont","know"],["no","idea"],["skip","this","one"],["skip","this"],
               ["skip","it"],["dunno"],["skip"],["pass"],["next"]]),
     ("pause", [["pause","the","game"],["hold","on"],["hang","on"],["pause"]]),
     ("stop", [["stop","the","game"],["thats","enough"],["im","done"],["end","game"],
@@ -138,15 +138,18 @@ PHRASES = [
 ]
 
 
-def phrase_matches(tokens, phrase):
+# A command must lead the utterance; the trailing budget stops it swallowing
+# an answer that follows. Tightest where being wrong costs most.
+TRAILING_BUDGET = {"stop": 0, "skip": 0,
+                   "pause": 2, "repeatQuestion": 2, "howManyLeft": 2, "resume": 2}
+
+
+def phrase_matches(tokens, phrase, trailing_budget):
     if len(phrase) > len(tokens):
         return False
-    if tokens[:len(phrase)] == phrase:
-        return True
-    if len(phrase) < 2:
+    if len(tokens) - len(phrase) > trailing_budget:
         return False
-    return any(tokens[i:i + len(phrase)] == phrase
-               for i in range(len(tokens) - len(phrase) + 1))
+    return tokens[:len(phrase)] == phrase
 
 
 def command(raw, allowed=None):
@@ -156,8 +159,9 @@ def command(raw, allowed=None):
     for name, variants in PHRASES:
         if allowed is not None and name not in allowed:
             continue
+        budget = TRAILING_BUDGET[name]
         for phrase in variants:
-            if phrase_matches(tokens, phrase):
+            if phrase_matches(tokens, phrase, budget):
                 return name
     return None
 

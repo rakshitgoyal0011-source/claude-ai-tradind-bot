@@ -43,7 +43,7 @@ DriveQuiz/                       App sources
 tools/
   verify.sh                      Runs everything that can actually execute here
   grader_reference.py            Python mirror of the pure logic
-  run_corpus.py                  92-case logic corpus against the mirror
+  run_corpus.py                  107-case logic corpus against the mirror
   validate_packs.py              Content checks against the real normalizer
   run_content_cases.py           Real spoken answers against shipped questions
 ```
@@ -62,6 +62,7 @@ calls I made. Each is a one-line change if you disagree.
 | Score | Correct count. Streak is tracked and announced but does not multiply |
 | `streak` on Session | In-drive streak. The daily streak is Phase 3 and gets its own field |
 | "How many left" | Answers both questions and minutes in one breath |
+| A guess after "I don't know" | Graded, not treated as a skip |
 | Pause and resume | Voice only. Microphone stays live through the pause for resume and stop |
 | Barge-in | Not in Phase 1. Speaking and listening never overlap |
 | Arriving mid-question | Finish the question. Never start one that will not fit |
@@ -88,7 +89,7 @@ calls I made. Each is a one-line change if you disagree.
 ./tools/verify.sh
 ```
 
-That is a 92-case logic corpus, a content check over all 100 questions, and 38
+That is a 107-case logic corpus, a content check over all 100 questions, and 38
 cases grading realistic spoken answers against the questions actually shipped,
 which is the check that decides whether the game is any fun. All three clean. No Swift toolchain is reachable in the build container,
 so `tools/grader_reference.py` is a hand-maintained Python port of the same
@@ -139,6 +140,20 @@ found seven defects, all fixed:
 
 The rate constant was also wrong: 0.5 is `AVSpeechUtteranceDefaultSpeechRate`,
 so the comment claiming it was slower than default was false. It is 0.46 now.
+
+A second pass over `DriveQuizKit`, which the first review had not covered,
+found three more:
+
+| Defect | Consequence |
+|---|---|
+| Multi-word commands matched anywhere in an utterance | "I'm done thinking, it's Napoleon" quit the game |
+| `skip` swallowed whatever followed it | "I don't know, maybe Napoleon" threw away a correct guess |
+| `alternates` was a required JSON key | One omitted line silently cost a whole 20-question pack |
+
+Commands now have to lead the utterance, with a trailing-word budget scaled to
+how much being wrong costs: zero for `stop`, which ends the drive, zero for
+`skip`, which discards a guess, and two for the recoverable ones, so "hold on a
+second" still pauses while "hold on, is it Rome" is graded as an answer.
 
 **Not verified.** Nothing has been compiled. There is no Swift toolchain and no
 Xcode in the container, and `download.swift.org` is blocked by the proxy.

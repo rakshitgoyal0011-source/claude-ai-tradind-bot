@@ -155,6 +155,33 @@ ok(order_by_freshness(["q0", "q1", "q2"], {}, COOLDOWN, D1) == ["q0", "q1", "q2"
 pruned = prune({"old": D1 - 200 * DAY, "new": D1 - 1 * DAY}, 120 * DAY, D1)
 ok("old" not in pruned and "new" in pruned, "prune drops only old entries")
 
+# --- trailing budget: a command must not swallow the answer after it
+for said, want in [
+    # stop ends the drive, so it must be said and nothing else.
+    ("I'm done thinking, it's Napoleon", None),
+    ("that's enough, it's Rome", None),
+    ("stop", "stop"),
+    ("stop the game", "stop"),
+    ("that's enough", "stop"),
+    # skip would throw away the guess that follows it.
+    ("I don't know, maybe Napoleon", None),
+    ("I don't know", "skip"),
+    ("skip this one", "skip"),
+    ("no idea", "skip"),
+    # recoverable commands get more slack, but not unlimited.
+    ("hold on", "pause"),
+    ("hold on a second", "pause"),
+    ("hold on, is it Rome", None),
+    ("can you repeat that", "repeatQuestion"),
+    ("how many questions left", "howManyLeft"),
+]:
+    got = command(said)
+    ok(got == want, f"trailing budget {said!r}: want {want}, got {got}")
+
+# The guess rescued from a skip must actually be graded.
+ok(grade(["I don't know, maybe Napoleon"], NAP)[0] == "correct",
+   "a guess after 'I don't know' is graded, not skipped")
+
 print(f"{'FAIL' if fails else 'PASS'}: {checks - len(fails)}/{checks} cases")
 for f in fails:
     print("  -", f)
