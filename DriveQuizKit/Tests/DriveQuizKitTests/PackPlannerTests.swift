@@ -190,4 +190,44 @@ final class PackPlannerTests: XCTestCase {
         )
         XCTAssertEqual(ordered.map(\.id), questions.map(\.id))
     }
+
+    // MARK: - Multiple packs
+
+    private func themed(_ id: String, _ theme: String, count: Int) -> QuestionPack {
+        QuestionPack(
+            id: id,
+            theme: theme,
+            questions: (0..<count).map {
+                Question(id: "\(id)-\($0)", prompt: "p", canonicalAnswer: "a",
+                         factOneLiner: "f", estimatedSeconds: 30)
+            }
+        )
+    }
+
+    func testASinglePackKeepsItsTheme() {
+        let plan = PackPlanner.plan(
+            packs: [themed("a", "Alpha", count: 20)],
+            availableSeconds: 600
+        )
+        XCTAssertEqual(plan.theme, "Alpha")
+    }
+
+    func testSeveralPacksAreLabelledMixed() {
+        let plan = PackPlanner.plan(
+            packs: [themed("a", "Alpha", count: 20), themed("b", "Beta", count: 20)],
+            availableSeconds: 600
+        )
+        XCTAssertEqual(plan.theme, "Mixed")
+    }
+
+    func testDrawsFromEveryPack() {
+        // A long drive against two packs should reach into both.
+        let plan = PackPlanner.plan(
+            packs: [themed("a", "Alpha", count: 20), themed("b", "Beta", count: 20)],
+            availableSeconds: 1800,
+            seed: 99
+        )
+        let prefixes = Set(plan.questions.map { String($0.id.prefix(1)) })
+        XCTAssertEqual(prefixes, ["a", "b"])
+    }
 }

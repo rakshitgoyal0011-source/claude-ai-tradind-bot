@@ -1,0 +1,26 @@
+{
+  "id": "world-20",
+  "theme": "Around the World",
+  "questions": [
+    {"id": "geo01", "prompt": "What is the largest hot desert in the world?", "canonicalAnswer": "Sahara", "alternates": ["the Sahara"], "factOneLiner": "It is roughly the size of the United States.", "difficulty": "easy", "estimatedSeconds": 27},
+    {"id": "geo02", "prompt": "Which river runs through Paris?", "canonicalAnswer": "Seine", "alternates": ["the Seine", "River Seine"], "factOneLiner": "Thirty seven bridges cross it inside the city.", "difficulty": "medium", "estimatedSeconds": 27},
+    {"id": "geo03", "prompt": "What is the capital of Japan?", "canonicalAnswer": "Tokyo", "alternates": [], "factOneLiner": "Its metropolitan area is the most populous on Earth.", "difficulty": "easy", "estimatedSeconds": 26},
+    {"id": "geo04", "prompt": "On which continent is the Amazon rainforest?", "canonicalAnswer": "South America", "alternates": ["South", "Latin America"], "factOneLiner": "It spreads across nine countries, most of it in Brazil.", "difficulty": "easy", "estimatedSeconds": 28},
+    {"id": "geo05", "prompt": "What is the currency of Japan?", "canonicalAnswer": "yen", "alternates": ["the yen", "Japanese yen"], "factOneLiner": "The name simply means round object.", "difficulty": "easy", "estimatedSeconds": 26},
+    {"id": "geo06", "prompt": "Which mountain range separates Europe from Asia?", "canonicalAnswer": "Urals", "alternates": ["the Urals", "Ural Mountains", "Ural"], "factOneLiner": "They are among the oldest mountains on the planet, and heavily worn down.", "difficulty": "hard", "estimatedSeconds": 30},
+    {"id": "geo07", "prompt": "What is the smallest country in the world?", "canonicalAnswer": "Vatican City", "alternates": ["the Vatican", "Vatican"], "factOneLiner": "You could walk its entire border in under an hour.", "difficulty": "medium", "estimatedSeconds": 28},
+    {"id": "geo08", "prompt": "What is the capital of Canada?", "canonicalAnswer": "Ottawa", "alternates": [], "factOneLiner": "It was chosen partly because it sat safely far from the American border.", "difficulty": "medium", "estimatedSeconds": 29},
+    {"id": "geo09", "prompt": "Which sea is famous for letting swimmers float easily?", "canonicalAnswer": "Dead Sea", "alternates": ["the Dead Sea"], "factOneLiner": "It is also the lowest land point on Earth.", "difficulty": "medium", "estimatedSeconds": 28},
+    {"id": "geo10", "prompt": "Which country is shaped like a boot?", "canonicalAnswer": "Italy", "alternates": [], "factOneLiner": "The island of Sicily sits right where the toe would kick.", "difficulty": "easy", "estimatedSeconds": 26},
+    {"id": "geo11", "prompt": "Which ocean lies between Africa and Australia?", "canonicalAnswer": "Indian Ocean", "alternates": ["Indian", "the Indian Ocean"], "factOneLiner": "It is the warmest of the world's oceans.", "difficulty": "medium", "estimatedSeconds": 28},
+    {"id": "geo12", "prompt": "What is the capital of Brazil?", "canonicalAnswer": "Brasilia", "alternates": [], "factOneLiner": "It was built from nothing in the nineteen fifties and laid out like an aeroplane.", "difficulty": "hard", "estimatedSeconds": 30},
+    {"id": "geo13", "prompt": "Which African country was never colonised by a European power?", "canonicalAnswer": "Ethiopia", "alternates": [], "factOneLiner": "It also uses its own calendar, running seven years behind ours.", "difficulty": "hard", "estimatedSeconds": 30},
+    {"id": "geo14", "prompt": "What is the largest island in the world?", "canonicalAnswer": "Greenland", "alternates": [], "factOneLiner": "Australia is bigger, but it counts as a continent rather than an island.", "difficulty": "medium", "estimatedSeconds": 29},
+    {"id": "geo15", "prompt": "Which American state is the largest by area?", "canonicalAnswer": "Alaska", "alternates": [], "factOneLiner": "It is more than twice the size of Texas.", "difficulty": "easy", "estimatedSeconds": 27},
+    {"id": "geo16", "prompt": "What is the capital of Egypt?", "canonicalAnswer": "Cairo", "alternates": [], "factOneLiner": "It is the largest city in the Arab world.", "difficulty": "easy", "estimatedSeconds": 26},
+    {"id": "geo17", "prompt": "Which country has cities called Auckland and Wellington?", "canonicalAnswer": "New Zealand", "alternates": [], "factOneLiner": "Wellington is the southernmost capital city in the world.", "difficulty": "easy", "estimatedSeconds": 28},
+    {"id": "geo18", "prompt": "What is the deepest ocean trench called?", "canonicalAnswer": "Mariana Trench", "alternates": ["the Mariana Trench", "Marianas Trench", "Mariana"], "factOneLiner": "Everest would sit inside it with more than two kilometres to spare.", "difficulty": "hard", "estimatedSeconds": 30},
+    {"id": "geo19", "prompt": "Which city is home to the Colosseum?", "canonicalAnswer": "Rome", "alternates": [], "factOneLiner": "It could hold around fifty thousand spectators.", "difficulty": "easy", "estimatedSeconds": 26},
+    {"id": "geo20", "prompt": "Which strait separates Europe from Africa?", "canonicalAnswer": "Gibraltar", "alternates": ["Strait of Gibraltar", "the Strait of Gibraltar"], "factOneLiner": "At its narrowest the two continents are about fourteen kilometres apart.", "difficulty": "hard", "estimatedSeconds": 30}
+  ]
+}

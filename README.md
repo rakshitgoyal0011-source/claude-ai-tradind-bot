@@ -38,9 +38,13 @@ DriveQuiz/                       App sources
   Trip/                          LocationProvider, ETAProvider, ETAClock, DestinationSearch
   Storage/                       FileProgressStore, JSON in Application Support
   CarPlay/                       GameCoordinator, NowPlayingController, CarPlaySceneDelegate
-  Content/                       PackLoader + Packs/starter-20.json
+  Content/                       PackLoader + five packs, 100 questions
 
-tools/                           Python mirror of the pure logic, see Verification
+tools/
+  verify.sh                      Runs everything that can actually execute here
+  grader_reference.py            Python mirror of the pure logic
+  run_corpus.py                  92-case corpus against the mirror
+  validate_packs.py              Content checks against the real normalizer
 ```
 
 ## Assumptions I made
@@ -72,17 +76,32 @@ calls I made. Each is a one-line change if you disagree.
 | CarPlay screen contents | Session name, score, day count. Never the question |
 | Transport controls | Next is skip, previous is repeat, play/pause is resume/pause |
 | CarPlay disconnect | The game keeps running on the phone, only the screen goes |
+| Theme choice | A picker on the setup screen. Mixed draws from all five packs |
+| One unreadable pack | Skipped, the drive still starts on the others |
 
 ## Verification status
 
-**Verified.** The pure logic runs against a 92-case corpus and all pass. No
-Swift toolchain is reachable in the build container, so
-`tools/grader_reference.py` is a hand-maintained Python port of the same rules
-and `tools/run_corpus.py` executes the corpus against it:
+**Verified.** Run everything that can execute here with one command:
 
 ```
-cd tools && python3 run_corpus.py     # PASS: 92/92 cases
+./tools/verify.sh
 ```
+
+That is a 92-case logic corpus and a content check over all 100 questions,
+both currently clean. No Swift toolchain is reachable in the build container,
+so `tools/grader_reference.py` is a hand-maintained Python port of the same
+rules and the corpus runs against it.
+
+`validate_packs.py` runs the real normalizer and command matcher over every
+question, so content that would break the voice loop fails here rather than in
+the car: an answer the grader would hear as a command, an answer sitting inside
+its own prompt, a duplicate id, a bare-letter answer that fuzzy matching cannot
+be trusted with. It caught two real problems on the first run, a `D` alternate
+for "vitamin D" and a `Leonardo` alternate for DiCaprio that collided with da
+Vinci in the starter pack. It also produced sixteen false alarms from a rule of
+mine that flagged every short answer; numeric answers like `8` are safe because
+answers of four characters or fewer get zero edit slack and need an exact
+match, so the rule now flags only bare letters.
 
 That covers grading, command matching, planner budget arithmetic, the wrap-up
 gate, the ETA countdown, daily streak transitions and question freshness
@@ -117,7 +136,7 @@ likely to be corrupt than useful. Create it once:
 1. New iOS App, SwiftUI, name it DriveQuiz, minimum deployment iOS 17.
 2. Drag the `DriveQuiz/` folders in as groups.
 3. Add `DriveQuizKit` as a local package dependency, then link it to the app target.
-4. Add `Content/Packs/starter-20.json` to Copy Bundle Resources.
+4. Add every file in `Content/Packs/` to Copy Bundle Resources. `PackLoader.bundledPackNames` lists them, so a pack that is not copied is skipped at launch rather than crashing.
 5. Add these Info.plist keys:
 
 ```
@@ -215,6 +234,13 @@ the question must be short enough to leave room for the closing summary. The
 planner budgets against the same threshold, so it never queues questions into
 the last 90 seconds that would never be asked.
 
+**Alternates that look redundant are not.** "Beatles" and "the Beatles"
+collapse onto the same tokens, so listing both adds nothing to grading. They
+are kept because `acceptedAnswers` is also what feeds the recognizer's
+`contextualStrings`, and biasing it toward more surface forms is the largest
+accuracy lever the app has. Redundant for grading is not redundant for
+recognition.
+
 **The car screen never shows the question.** Constraint two says no question
 may be answerable from a screen, and a prompt on the dash is exactly that. Now
 Playing gets the session name, the score and the day count, which is the same
@@ -245,13 +271,14 @@ feels alive.
 
 ## Known limitations
 
-- **The pack is shorter than a commute, and that breaks the cooldown.** Twenty
-  questions is 546 seconds of content, so a drive of about 11 minutes exhausts
-  it and the game wraps up early saying so. Worse for Phase 3: a ten-minute
-  drive uses 16 of the 20, so the second drive has only 4 fresh questions and
-  then starts repeating regardless of the 14-day cooldown. The ordering is
-  correct; there is simply not enough content for it to matter yet. More packs
-  fix this, nothing in the code needs to change.
+- **Content is now 46 minutes, so a long drive can still run dry.** Five packs
+  and 100 questions cover roughly three or four commutes before the 14-day
+  cooldown starts handing back repeats. That is enough for the ordering to
+  matter, which it was not at 20 questions, but a daily driver will still
+  outrun it inside a fortnight. Picking a single theme shrinks the pool to
+  about nine minutes, so a themed long drive runs out sooner.
+- **The question facts have not been fact-checked by anyone but me.** The
+  validator checks structure and voice-safety, not truth.
 - **The streak is announced before it is earned.** The intro says "day 5 in a
   row" based on a projection, but the drive is only recorded once at least one
   question has been asked. Starting and immediately stopping does not count.

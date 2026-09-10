@@ -13,6 +13,9 @@ struct StartView: View {
 
     @State private var source: LengthSource = .destination
     @State private var minutes: Int = 20
+    /// nil means draw from every pack.
+    @State private var selectedPackID: String?
+    @State private var packs: [QuestionPack] = []
     @State private var query: String = ""
     @State private var results: [DestinationResult] = []
     @State private var chosen: DestinationResult?
@@ -61,6 +64,8 @@ struct StartView: View {
             } else {
                 minutesPicker
             }
+
+            themePicker
 
             if let status {
                 Text(status)
@@ -161,6 +166,39 @@ struct StartView: View {
         }
     }
 
+    private var themePicker: some View {
+        Menu {
+            Button("Mixed") { selectedPackID = nil }
+            ForEach(packs, id: \.id) { pack in
+                Button(pack.theme) { selectedPackID = pack.id }
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Text(selectedThemeName)
+                Image(systemName: "chevron.down").font(.caption)
+            }
+            .font(.title3)
+        }
+        .task {
+            guard packs.isEmpty else { return }
+            packs = (try? PackLoader.loadAll()) ?? []
+        }
+    }
+
+    private var selectedThemeName: String {
+        guard let selectedPackID,
+              let pack = packs.first(where: { $0.id == selectedPackID })
+        else { return "Mixed" }
+        return pack.theme
+    }
+
+    private var chosenPacks: [QuestionPack] {
+        guard let selectedPackID,
+              let pack = packs.first(where: { $0.id == selectedPackID })
+        else { return packs }
+        return [pack]
+    }
+
     private var finishedSummary: String? {
         guard case .finished(let summary)? = engine?.phase else { return nil }
         return summary
@@ -205,14 +243,15 @@ struct StartView: View {
             }
 
             do {
-                let pack = try PackLoader.load()
+                if packs.isEmpty { packs = try PackLoader.loadAll() }
+                let selection = chosenPacks
                 let (clock, seconds, mode) = try await makeClock()
                 let progress = FeatureFlags.persistenceEnabled ? store.load() : .fresh
 
                 try audio.activate()
 
                 let plan = PackPlanner.plan(
-                    packs: [pack],
+                    packs: selection,
                     availableSeconds: seconds,
                     mode: mode,
                     // Traffic stretches an ETA. Queue past it and let the

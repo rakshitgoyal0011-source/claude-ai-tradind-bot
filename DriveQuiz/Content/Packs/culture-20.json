@@ -1,0 +1,26 @@
+{
+  "id": "culture-20",
+  "theme": "Music and Film",
+  "questions": [
+    {"id": "cul01", "prompt": "Which band recorded the album Abbey Road?", "canonicalAnswer": "the Beatles", "alternates": ["Beatles"], "factOneLiner": "The crossing on the cover is now a listed landmark.", "difficulty": "easy", "estimatedSeconds": 27},
+    {"id": "cul02", "prompt": "How many strings does a standard guitar have?", "canonicalAnswer": "6", "alternates": ["six", "six strings"], "factOneLiner": "Bass guitars usually have four, tuned an octave lower.", "difficulty": "easy", "estimatedSeconds": 25},
+    {"id": "cul03", "prompt": "Which film features a shark terrorising a beach town?", "canonicalAnswer": "Jaws", "alternates": [], "factOneLiner": "The mechanical shark broke down so often that it barely appears on screen.", "difficulty": "easy", "estimatedSeconds": 29},
+    {"id": "cul04", "prompt": "Which instrument has eighty eight keys?", "canonicalAnswer": "piano", "alternates": ["the piano"], "factOneLiner": "Fifty two are white and thirty six are black.", "difficulty": "easy", "estimatedSeconds": 27},
+    {"id": "cul05", "prompt": "Who directed Jurassic Park?", "canonicalAnswer": "Steven Spielberg", "alternates": ["Spielberg"], "factOneLiner": "The dinosaur roars were built from tortoise, goose and dolphin recordings.", "difficulty": "medium", "estimatedSeconds": 29},
+    {"id": "cul06", "prompt": "Which singer is known as the King of Pop?", "canonicalAnswer": "Michael Jackson", "alternates": ["Jackson"], "factOneLiner": "Thriller is still among the best selling albums ever made.", "difficulty": "easy", "estimatedSeconds": 28},
+    {"id": "cul07", "prompt": "What is the highest female singing voice?", "canonicalAnswer": "soprano", "alternates": [], "factOneLiner": "The name comes from the Italian for above.", "difficulty": "medium", "estimatedSeconds": 27},
+    {"id": "cul08", "prompt": "Which country did the band ABBA come from?", "canonicalAnswer": "Sweden", "alternates": [], "factOneLiner": "The name is simply the four members' first initials.", "difficulty": "easy", "estimatedSeconds": 27},
+    {"id": "cul09", "prompt": "How many musicians play in a string quartet?", "canonicalAnswer": "4", "alternates": ["four"], "factOneLiner": "Two violins, a viola and a cello.", "difficulty": "easy", "estimatedSeconds": 25},
+    {"id": "cul10", "prompt": "Which Italian composer wrote The Four Seasons?", "canonicalAnswer": "Vivaldi", "alternates": ["Antonio Vivaldi"], "factOneLiner": "He was a priest, and was nicknamed the Red Priest for his hair.", "difficulty": "medium", "estimatedSeconds": 29},
+    {"id": "cul11", "prompt": "Which animated film features a lion cub named Simba?", "canonicalAnswer": "the Lion King", "alternates": ["Lion King"], "factOneLiner": "The opening chant is in Zulu.", "difficulty": "easy", "estimatedSeconds": 28},
+    {"id": "cul12", "prompt": "What is the lowest male singing voice?", "canonicalAnswer": "bass", "alternates": [], "factOneLiner": "Below it sits a rare range called basso profondo.", "difficulty": "medium", "estimatedSeconds": 27},
+    {"id": "cul13", "prompt": "Which rock band had Freddie Mercury as its lead singer?", "canonicalAnswer": "Queen", "alternates": [], "factOneLiner": "Bohemian Rhapsody has no chorus at all.", "difficulty": "easy", "estimatedSeconds": 28},
+    {"id": "cul14", "prompt": "Who composed the music for Star Wars?", "canonicalAnswer": "John Williams", "alternates": ["Williams"], "factOneLiner": "He also wrote the themes for Jaws, Indiana Jones and Jurassic Park.", "difficulty": "medium", "estimatedSeconds": 29},
+    {"id": "cul15", "prompt": "Which composer kept writing after going completely deaf?", "canonicalAnswer": "Beethoven", "alternates": ["Ludwig van Beethoven"], "factOneLiner": "He could not hear the applause for his own Ninth Symphony.", "difficulty": "medium", "estimatedSeconds": 30},
+    {"id": "cul16", "prompt": "Which musical features the song Memory?", "canonicalAnswer": "Cats", "alternates": [], "factOneLiner": "The lyrics were drawn from a T. S. Eliot poem.", "difficulty": "hard", "estimatedSeconds": 28},
+    {"id": "cul17", "prompt": "What does DJ stand for?", "canonicalAnswer": "disc jockey", "alternates": ["disk jockey"], "factOneLiner": "The term dates back to radio in the nineteen thirties.", "difficulty": "medium", "estimatedSeconds": 27},
+    {"id": "cul18", "prompt": "Which film's hero is a boxer from Philadelphia?", "canonicalAnswer": "Rocky", "alternates": [], "factOneLiner": "It was written in about three days and won Best Picture.", "difficulty": "medium", "estimatedSeconds": 28},
+    {"id": "cul19", "prompt": "How many lines does a musical staff have?", "canonicalAnswer": "5", "alternates": ["five", "five lines"], "factOneLiner": "Notes sit both on the lines and in the spaces between them.", "difficulty": "medium", "estimatedSeconds": 26},
+    {"id": "cul20", "prompt": "Which actor played Jack in the film Titanic?", "canonicalAnswer": "Leonardo DiCaprio", "alternates": ["DiCaprio"], "factOneLiner": "He was already an Oscar nominee before the film came out.", "difficulty": "easy", "estimatedSeconds": 29}
+  ]
+}
