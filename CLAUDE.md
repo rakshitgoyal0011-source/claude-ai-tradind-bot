@@ -8,6 +8,7 @@ Voice-only trivia sized to a drive. iOS 17+, SwiftUI, Swift 5.9.
 ./scripts/bootstrap.sh          # project.yml -> DriveQuiz.xcodeproj (needs xcodegen)
 cd DriveQuizKit && swift test   # the logic tests, fastest signal
 python tools/verify.py          # any machine, no Swift needed, works on Windows
+python tools/drive_sim.py       # play a whole drive at the terminal
 ```
 
 **The maintainer is on Windows and has no Mac.** iOS cannot be built there, so
@@ -64,6 +65,18 @@ audible.
 
 When you add a failure path, ask what the driver hears. "Nothing" is never the
 answer.
+
+## Read the transcript before changing spoken copy
+
+`tools/drive_sim.py` plays a whole drive using the real rules and the real
+content. Every copy bug found so far was invisible in the source and obvious
+in a transcript: a promise the drive could not keep, a status line that read
+as a workload, three utterances running together with no breath. If you touch
+anything the app says, run a drive and read it back.
+
+`--check` runs the same drive silently and asserts nine invariants, including
+that every question asked produced a spoken outcome. It is part of
+`verify.py`.
 
 ## State of things
 

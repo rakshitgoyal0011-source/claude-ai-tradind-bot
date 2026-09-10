@@ -46,8 +46,9 @@ scripts/bootstrap.sh             Generates DriveQuiz.xcodeproj from it
 CLAUDE.md                        Invariants a change must not break
 
 tools/
-  verify.py                      Same checks, any platform, including Windows
+  verify.py                      All four checks, any platform, including Windows
   verify.sh                      Same, for shells
+  drive_sim.py                   Plays a whole drive at the terminal
   grader_reference.py            Python mirror of the pure logic
   run_corpus.py                  117-case logic corpus against the mirror
   validate_packs.py              Content checks against the real normalizer
@@ -208,6 +209,15 @@ Meanwhile the logic and content checks run fine on Windows:
 python tools\verify.py
 ```
 
+You can also play a whole drive at the terminal. It is not the app, but it
+is the real loop over the real content with the real grading, so it answers
+the question the unit tests cannot: what does this actually feel like?
+
+```
+python tools\drive_sim.py                 # you answer, by typing
+python tools\drive_sim.py --script demo   # a canned driver, no input
+```
+
 ### On a Mac
 
 One command:
@@ -326,6 +336,18 @@ checks two things: the drive must still be outside the wrap-up threshold, and
 the question must be short enough to leave room for the closing summary. The
 planner budgets against the same threshold, so it never queues questions into
 the last 90 seconds that would never be asked.
+
+**The drive simulator found copy bugs nothing else could.** Playing a full
+20 minute drive at the terminal showed three problems that were invisible in
+the source. The intro promised "39 questions for your 20 minute drive" and
+then delivered 34, because repeats and status questions eat the budget; it
+quotes no count at all now, which is also a number no driver has any use
+for. "How many left" answered "35 questions left" first, which reads as a
+workload rather than an answer; it leads with the time now and mentions
+questions only once there are five or fewer. And a verdict, a fact and the
+next question ran together with no gap, which is relentless to listen to, so
+there is now a two second breath before each question. That gap is what the
+"gaps" in `estimatedSeconds` were always supposed to pay for.
 
 **Silence is this app's crash.** Every defect found in three review passes
 presented the same way: no crash, no error, no log, just a car that stopped

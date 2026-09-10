@@ -99,8 +99,12 @@ final class GameEngine {
 
     /// Speaking funnel. Nothing else in the engine may call audio.say, or the
     /// watchdog would think the game had gone quiet while it was talking.
-    private func speak(_ text: String) async {
-        await audio.say(text)
+    /// Silence held before a new question, so a verdict, a fact and the next
+    /// prompt do not run together into one wall of speech.
+    private static let breathBeforeQuestion: TimeInterval = 2.0
+
+    private func speak(_ text: String, pauseBefore: TimeInterval = 0) async {
+        await audio.say(text, pauseBefore: pauseBefore)
         lastSpokeAt = Date()
     }
 
@@ -238,7 +242,9 @@ final class GameEngine {
                 needsPrompt = true
             }
 
-            if needsPrompt { await speak(question.prompt) }
+            if needsPrompt {
+                await speak(question.prompt, pauseBefore: Self.breathBeforeQuestion)
+            }
             needsPrompt = true
 
             let heard = await audio.hear(timeout: 8, hints: question.recognitionHints)
@@ -469,13 +475,15 @@ final class GameEngine {
             return "That is not quite enough time for a round. Drive safely."
         }
 
+        // No question count. The queue is padded for traffic in ETA mode, and
+        // even in minutes mode a repeat or a status question eats into it, so
+        // any number quoted here is a promise the drive will not keep. It is
+        // also not a number a driver has any use for.
         let opener: String
         switch plan.mode {
         case .manualMinutes:
-            opener = "\(plan.theme). I have \(count) questions for your \(minutes) minute drive."
+            opener = "\(plan.theme). \(minutes) minutes on the clock."
         case .estimatedArrival:
-            // The queue is padded past the estimate for traffic, so promising
-            // a question count here would be a lie.
             opener = "\(plan.theme). About \(minutes) minutes to your destination. "
                 + "I will wrap up as you arrive."
         }
@@ -513,8 +521,11 @@ final class GameEngine {
             left = min(capacity, max(0, plan.questions.count - session.asked))
         }
 
-        let questionPart = left == 1 ? "One question left" : "\(left) questions left"
-        return "\(questionPart), \(minutePart) to go."
+        // Time is what the driver actually wants. A question count only helps
+        // once it is small enough to be a countdown rather than a workload.
+        guard left <= 5 else { return "\(minutePart) to go." }
+        let questionPart = left == 1 ? "one question left" : "\(left) questions left"
+        return "\(minutePart) to go, \(questionPart)."
     }
 
     private var averageQuestionSeconds: TimeInterval {

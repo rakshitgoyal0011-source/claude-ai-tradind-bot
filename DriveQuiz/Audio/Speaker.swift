@@ -25,7 +25,11 @@ final class Speaker: NSObject {
         synthesizer.usesApplicationAudioSession = true
     }
 
-    func speak(_ text: String) async {
+    /// - Parameter pauseBefore: silence held before the utterance starts.
+    ///   Running a verdict, a fact and the next question together with no gap
+    ///   turns the game into an interrogation. This is what the "gaps" in
+    ///   Question.estimatedSeconds actually pay for.
+    func speak(_ text: String, pauseBefore: TimeInterval = 0) async {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
 
@@ -33,6 +37,7 @@ final class Speaker: NSObject {
 
         let utterance = AVSpeechUtterance(string: trimmed)
         utterance.rate = rate
+        utterance.preUtteranceDelay = pauseBefore
         utterance.postUtteranceDelay = 0.1
         utterance.voice = AVSpeechSynthesisVoice(language: voiceLanguage)
 

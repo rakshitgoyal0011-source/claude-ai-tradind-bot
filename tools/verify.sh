@@ -14,3 +14,6 @@ python3 validate_packs.py
 echo
 echo "--- real answers against shipped questions ---"
 python3 run_content_cases.py
+echo
+echo "--- a whole drive, end to end ---"
+python3 drive_sim.py --check

@@ -13,19 +13,20 @@ import sys
 HERE = pathlib.Path(__file__).resolve().parent
 
 STEPS = [
-    ("grading, commands, planner, ETA, streaks, watchdog", "run_corpus.py"),
-    ("question packs", "validate_packs.py"),
-    ("real answers against shipped questions", "run_content_cases.py"),
+    ("grading, commands, planner, ETA, streaks, watchdog", ["run_corpus.py"]),
+    ("question packs", ["validate_packs.py"]),
+    ("real answers against shipped questions", ["run_content_cases.py"]),
+    ("a whole drive, end to end", ["drive_sim.py", "--check"]),
 ]
 
 
 def main() -> int:
     failures = []
-    for title, script in STEPS:
+    for title, argv in STEPS:
         print(f"--- {title} ---", flush=True)
-        result = subprocess.run([sys.executable, str(HERE / script)], cwd=HERE)
+        result = subprocess.run([sys.executable, str(HERE / argv[0]), *argv[1:]], cwd=HERE)
         if result.returncode != 0:
-            failures.append(script)
+            failures.append(argv[0])
         print(flush=True)
 
     if failures:

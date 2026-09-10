@@ -84,10 +84,10 @@ final class AudioSessionController {
 
     // MARK: - Serialised speak and listen
 
-    func say(_ text: String) async {
+    func say(_ text: String, pauseBefore: TimeInterval = 0) async {
         guard state != .stopped, state != .interrupted else { return }
         transition(to: .speaking)
-        await speaker.speak(text)
+        await speaker.speak(text, pauseBefore: pauseBefore)
     }
 
     func hear(timeout: TimeInterval = 8, hints: [String] = []) async -> Transcript {
