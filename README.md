@@ -24,6 +24,7 @@ DriveQuizKit/                    Swift package. Pure logic, no AVFoundation, no 
     CommandMatcher.swift         repeat / skip / pause / resume / how many left / stop
     PackPlanner.swift            Fits questions to available seconds
     ETASnapshot.swift            Arrival estimate plus countdown maths
+    SilenceWatchdog.swift        What to do when the game goes quiet
     DailyStreak.swift            Calendar-day streak arithmetic
     QuestionHistory.swift        What this driver has already been asked
     PlayerProgress.swift         Everything remembered between drives
@@ -43,7 +44,7 @@ DriveQuiz/                       App sources
 tools/
   verify.sh                      Runs everything that can actually execute here
   grader_reference.py            Python mirror of the pure logic
-  run_corpus.py                  107-case logic corpus against the mirror
+  run_corpus.py                  117-case logic corpus against the mirror
   validate_packs.py              Content checks against the real normalizer
   run_content_cases.py           Real spoken answers against shipped questions
 ```
@@ -89,7 +90,7 @@ calls I made. Each is a one-line change if you disagree.
 ./tools/verify.sh
 ```
 
-That is a 107-case logic corpus, a content check over all 100 questions, and 38
+That is a 117-case logic corpus, a content check over all 100 questions, and 38
 cases grading realistic spoken answers against the questions actually shipped,
 which is the check that decides whether the game is any fun. All three clean. No Swift toolchain is reachable in the build container,
 so `tools/grader_reference.py` is a hand-maintained Python port of the same
@@ -280,6 +281,20 @@ checks two things: the drive must still be outside the wrap-up threshold, and
 the question must be short enough to leave room for the closing summary. The
 planner budgets against the same threshold, so it never queues questions into
 the last 90 seconds that would never be asked.
+
+**Silence is this app's crash.** Every defect found in three review passes
+presented the same way: no crash, no error, no log, just a car that stopped
+talking. A driver who cannot look at the screen has no way to tell a thinking
+pause from a dead app, so the eleventh fix was a watchdog rather than another
+individual bug. If nothing has been spoken for 30 seconds the game tries to
+unstick itself, and at 60 seconds it stops and says so on the card. It
+deliberately does not care why. Pausing and audio interruptions are exempt,
+because that is silence the driver asked for or can hear the reason for.
+
+The same reasoning covers a failing recogniser. A broken recogniser and a
+quiet driver both produce an empty transcript, so the engine now counts
+consecutive outright failures and tells the driver once that it cannot hear
+them, instead of silently reading out every answer for the rest of the drive.
 
 **Alternates that look redundant are not.** "Beatles" and "the Beatles"
 collapse onto the same tokens, so listing both adds nothing to grading. They

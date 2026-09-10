@@ -13,6 +13,11 @@ final class AudioSessionController {
 
     private(set) var state: AudioState = .idle
 
+    /// Consecutive listens that failed outright rather than hearing nothing.
+    /// A broken recogniser and a quiet driver both produce an empty
+    /// transcript, and the driver deserves to be told which one it is.
+    private(set) var consecutiveListenFailures = 0
+
     let speaker = Speaker()
     let listener = Listener()
 
@@ -94,8 +99,11 @@ final class AudioSessionController {
         try? await Task.sleep(for: .milliseconds(250))
 
         do {
-            return try await listener.listen(timeout: timeout, hints: hints)
+            let heard = try await listener.listen(timeout: timeout, hints: hints)
+            consecutiveListenFailures = 0
+            return heard
         } catch {
+            consecutiveListenFailures += 1
             return .empty
         }
     }

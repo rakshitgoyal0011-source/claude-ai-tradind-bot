@@ -286,3 +286,21 @@ def order_by_freshness(ids, last_asked, cooldown, now):
 
 def prune(last_asked, window, now):
     return {k: v for k, v in last_asked.items() if (now - v) < window}
+
+
+# ---------------------------------------------------------------------------
+# SilenceWatchdog mirror.
+# ---------------------------------------------------------------------------
+
+NUDGE_AFTER = 30.0
+GIVE_UP_AFTER = 60.0
+
+
+def watchdog_action(silent_for, is_paused, is_interrupted):
+    if is_paused or is_interrupted:
+        return "wait"
+    if silent_for >= GIVE_UP_AFTER:
+        return "giveUp"
+    if silent_for >= NUDGE_AFTER:
+        return "nudge"
+    return "wait"

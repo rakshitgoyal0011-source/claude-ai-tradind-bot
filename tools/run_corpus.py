@@ -182,6 +182,27 @@ for said, want in [
 ok(grade(["I don't know, maybe Napoleon"], NAP)[0] == "correct",
    "a guess after 'I don't know' is graded, not skipped")
 
+from grader_reference import watchdog_action
+
+# --- silence watchdog: the last line of defence against a quiet app
+for silent, paused, interrupted, want in [
+    (0,    False, False, "wait"),
+    (20,   False, False, "wait"),
+    (29.9, False, False, "wait"),
+    (30,   False, False, "nudge"),
+    (59,   False, False, "nudge"),
+    (60,   False, False, "giveUp"),
+    (600,  False, False, "giveUp"),
+    # Silence the driver asked for, or can hear the reason for.
+    (600,  True,  False, "wait"),
+    (600,  False, True,  "wait"),
+    (600,  True,  True,  "wait"),
+]:
+    got = watchdog_action(silent, paused, interrupted)
+    ok(got == want,
+       f"watchdog silent={silent} paused={paused} interrupted={interrupted}: "
+       f"want {want}, got {got}")
+
 print(f"{'FAIL' if fails else 'PASS'}: {checks - len(fails)}/{checks} cases")
 for f in fails:
     print("  -", f)

@@ -28,6 +28,14 @@ struct SessionCardView: View {
                     .foregroundStyle(.secondary)
             }
 
+            if card.watchdogEnded {
+                Text("Stopped: audio was not responding")
+                    .font(.title3)
+                    .foregroundStyle(.red)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+            }
+
             if card.isPaused {
                 Text("Paused. Say resume.")
                     .font(.title3)

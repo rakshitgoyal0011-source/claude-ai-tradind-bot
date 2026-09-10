@@ -26,6 +26,11 @@ final class GameEngine {
     /// Set by a control outside the voice loop, such as a CarPlay button.
     private var externalCommand: VoiceCommand?
 
+    /// Watchdog state. See SilenceWatchdog for why this exists.
+    private var lastSpokeAt = Date()
+    private var watchdogTask: Task<Void, Never>?
+    private var warnedAboutHearing = false
+
     /// Commands the driver may use while a question is on the table.
     private let inGameCommands: Set<VoiceCommand> =
         [.repeatQuestion, .skip, .pause, .howManyLeft, .stop]
@@ -87,7 +92,51 @@ final class GameEngine {
             }
         }
 
+        lastSpokeAt = Date()
         loopTask = Task { await self.run() }
+        startWatchdog()
+    }
+
+    /// Speaking funnel. Nothing else in the engine may call audio.say, or the
+    /// watchdog would think the game had gone quiet while it was talking.
+    private func speak(_ text: String) async {
+        await audio.say(text)
+        lastSpokeAt = Date()
+    }
+
+    private func startWatchdog() {
+        guard watchdogTask == nil else { return }
+        watchdogTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(5))
+                guard !Task.isCancelled, let self else { return }
+                self.checkForSilence()
+            }
+        }
+    }
+
+    private func checkForSilence() {
+        guard card.isRunning, !stopRequested else { return }
+
+        switch SilenceWatchdog.action(
+            silentFor: Date().timeIntervalSince(lastSpokeAt),
+            isPaused: card.isPaused,
+            isInterrupted: audio.state == .interrupted
+        ) {
+        case .wait:
+            return
+
+        case .nudge:
+            // Usually a listen that will not finish. Ending it hands control
+            // back to the loop, which speaks next.
+            audio.interruptListening()
+
+        case .giveUp:
+            // Whatever went wrong is not recovering. An explained ending
+            // beats a car that has simply stopped talking.
+            card.watchdogEnded = true
+            stop()
+        }
     }
 
     /// The on-screen stop button and the "stop" command land here.
@@ -95,6 +144,8 @@ final class GameEngine {
         stopRequested = true
         loopTask?.cancel()
         loopTask = nil
+        watchdogTask?.cancel()
+        watchdogTask = nil
         persistProgress()
         clock.stop()
         audio.deactivate()
@@ -127,7 +178,7 @@ final class GameEngine {
     }
 
     private func run() async {
-        await audio.say(introText())
+        await speak(introText())
 
         for question in plan.questions {
             if stopRequested || Task.isCancelled { break }
@@ -151,9 +202,11 @@ final class GameEngine {
     private func finish() async {
         persistProgress()
         let summary = summaryText(interrupted: false)
-        await audio.say(summary)
+        await speak(summary)
         phase = .finished(summary: summary)
         card.isRunning = false
+        watchdogTask?.cancel()
+        watchdogTask = nil
         clock.stop()
         audio.deactivate()
     }
@@ -185,7 +238,7 @@ final class GameEngine {
                 needsPrompt = true
             }
 
-            if needsPrompt { await audio.say(question.prompt) }
+            if needsPrompt { await speak(question.prompt) }
             needsPrompt = true
 
             let heard = await audio.hear(timeout: 8, hints: question.recognitionHints)
@@ -198,7 +251,7 @@ final class GameEngine {
                 case .skip:
                     session.recordSkipped()
                     refreshCard()
-                    await audio.say("Skipping. The answer was \(question.canonicalAnswer).")
+                    await speak("Skipping. The answer was \(question.canonicalAnswer).")
                     return
 
                 case .pause:
@@ -213,7 +266,7 @@ final class GameEngine {
                     continue
 
                 case .howManyLeft:
-                    await audio.say(remainingText())
+                    await speak(remainingText())
                     continue
 
                 case .stop:
@@ -229,33 +282,44 @@ final class GameEngine {
             let verdict = AnswerGrader.grade(candidates: heard.candidates, question: question)
 
             switch verdict {
+            case _ where audio.consecutiveListenFailures >= 2 && !warnedAboutHearing:
+                // Not the driver being quiet: the recogniser is failing. Say
+                // so once rather than silently reading out every answer.
+                warnedAboutHearing = true
+                await speak("I am having trouble hearing you. "
+                    + "I will read out the answers for now.")
+                session.recordSkipped()
+                refreshCard()
+                await speak("This one was \(question.canonicalAnswer).")
+                return
+
             case .noSpeech where !nudged:
                 // One nudge, then move on. Repeating forever is worse than
                 // losing a question. The prompt is not repeated: they heard
                 // it, they just did not answer.
                 nudged = true
                 needsPrompt = false
-                await audio.say("Still there? Take a guess, or say skip.")
+                await speak("Still there? Take a guess, or say skip.")
                 continue
 
             case .noSpeech:
                 session.recordSkipped()
                 refreshCard()
-                await audio.say("Let us move on. The answer was \(question.canonicalAnswer).")
+                await speak("Let us move on. The answer was \(question.canonicalAnswer).")
                 return
 
             case .correct:
                 session.recordCorrect()
                 refreshCard()
-                await audio.say(correctText())
-                await audio.say(question.factOneLiner)
+                await speak(correctText())
+                await speak(question.factOneLiner)
                 return
 
             case .incorrect:
                 session.recordIncorrect()
                 refreshCard()
-                await audio.say("Not quite. It was \(question.canonicalAnswer).")
-                await audio.say(question.factOneLiner)
+                await speak("Not quite. It was \(question.canonicalAnswer).")
+                await speak(question.factOneLiner)
                 return
             }
         }
@@ -266,7 +330,7 @@ final class GameEngine {
         guard !stopRequested, !Task.isCancelled else { return }
         session.recordSkipped()
         refreshCard()
-        await audio.say("Let us move on. The answer was \(question.canonicalAnswer).")
+        await speak("Let us move on. The answer was \(question.canonicalAnswer).")
     }
 
     // MARK: - Pause
@@ -279,7 +343,7 @@ final class GameEngine {
         audio.enterPause()
         phase = .paused
         card.isPaused = true
-        await audio.say("Paused. Say resume when you are ready.")
+        await speak("Paused. Say resume when you are ready.")
 
         // Roughly five minutes of listening to nothing.
         let maxIdleRounds = 25
@@ -319,7 +383,7 @@ final class GameEngine {
                 clock.resume()
                 phase = .running
                 card.isPaused = false
-                await audio.say("Back to it.")
+                await speak("Back to it.")
                 return
             case .stop:
                 stopRequested = true
@@ -334,9 +398,11 @@ final class GameEngine {
     private func finishEarly() async {
         persistProgress()
         let summary = summaryText(interrupted: true)
-        await audio.say(summary)
+        await speak(summary)
         phase = .finished(summary: summary)
         card.isRunning = false
+        watchdogTask?.cancel()
+        watchdogTask = nil
         clock.stop()
         audio.deactivate()
     }
@@ -461,6 +527,13 @@ final class GameEngine {
         guard session.asked > 0 else {
             return interrupted ? "Stopped before we got going. See you tomorrow."
                                : "We ran out of road. See you tomorrow."
+        }
+        if card.watchdogEnded {
+            // Spoken output is what failed, so this exists to be read on the
+            // card afterwards rather than heard.
+            return "DriveQuiz went quiet and stopped itself. "
+                + "You had \(session.correct) out of \(session.asked). "
+                + "Sorry about that."
         }
         let opener = interrupted ? "Stopping there." : "That is the drive."
         var parts = ["\(opener) You got \(session.correct) out of \(session.asked)."]
