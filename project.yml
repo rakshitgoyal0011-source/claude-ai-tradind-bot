@@ -1,0 +1,69 @@
+# XcodeGen spec. Run ./scripts/bootstrap.sh to turn this into DriveQuiz.xcodeproj.
+#
+# The project file itself is not committed on purpose: a hand-written
+# pbxproj is more likely to be subtly corrupt than useful, and a generated
+# one is reproducible and reviewable as a diff.
+
+name: DriveQuiz
+
+options:
+  bundleIdPrefix: com.example
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+packages:
+  DriveQuizKit:
+    path: DriveQuizKit
+
+targets:
+  DriveQuiz:
+    type: application
+    platform: iOS
+
+    sources:
+      - path: DriveQuiz
+        excludes:
+          # Referenced through INFOPLIST_FILE, not copied as a resource.
+          - "Info.plist"
+
+    dependencies:
+      - package: DriveQuizKit
+        product: DriveQuizKit
+
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.drivequiz
+        PRODUCT_NAME: DriveQuiz
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "5.9"
+        # iPhone only. A driving app has no iPad story.
+        TARGETED_DEVICE_FAMILY: "1"
+        INFOPLIST_FILE: DriveQuiz/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        ENABLE_USER_SCRIPT_SANDBOXING: YES
+        # Surfaces actor-isolation mistakes as warnings rather than letting
+        # them become runtime races. Ten defects were found by review in this
+        # codebase; the compiler should catch the next ones.
+        SWIFT_STRICT_CONCURRENCY: targeted
+      configs:
+        Debug:
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG
+          SWIFT_OPTIMIZATION_LEVEL: "-Onone"
+        Release:
+          SWIFT_OPTIMIZATION_LEVEL: "-O"
+
+schemes:
+  DriveQuiz:
+    build:
+      targets:
+        DriveQuiz: all
+    run:
+      config: Debug
+    # DriveQuizKitTests lives in the Swift package, not this project, so it is
+    # not wired in here. Run it with `swift test` from DriveQuizKit/, or from
+    # the package in Xcode's navigator.

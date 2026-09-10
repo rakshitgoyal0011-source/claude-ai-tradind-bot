@@ -41,6 +41,10 @@ DriveQuiz/                       App sources
   CarPlay/                       GameCoordinator, NowPlayingController, CarPlaySceneDelegate
   Content/                       PackLoader + five packs, 100 questions
 
+project.yml                      XcodeGen spec, the whole project setup
+scripts/bootstrap.sh             Generates DriveQuiz.xcodeproj from it
+CLAUDE.md                        Invariants a change must not break
+
 tools/
   verify.sh                      Runs everything that can actually execute here
   grader_reference.py            Python mirror of the pure logic
@@ -178,24 +182,37 @@ GPS, a real route, or a real car.
 
 ## Getting it into Xcode
 
-The `.xcodeproj` is not checked in, because a hand-written project file is more
-likely to be corrupt than useful. Create it once:
+One command, on a Mac:
 
-1. New iOS App, SwiftUI, name it DriveQuiz, minimum deployment iOS 17.
-2. Drag the `DriveQuiz/` folders in as groups.
-3. Add `DriveQuizKit` as a local package dependency, then link it to the app target.
-4. Add every file in `Content/Packs/` to Copy Bundle Resources. `PackLoader.bundledPackNames` lists them, so a pack that is not copied is skipped at launch rather than crashing.
-5. Add these Info.plist keys:
-
-```
-NSMicrophoneUsageDescription         DriveQuiz listens for your spoken answers.
-NSSpeechRecognitionUsageDescription  DriveQuiz turns your spoken answers into text on your device.
-NSLocationWhenInUseUsageDescription  DriveQuiz uses your location to size the game to your drive.
-UIBackgroundModes                    audio
+```sh
+./scripts/bootstrap.sh      # needs: brew install xcodegen
+open DriveQuiz.xcodeproj
 ```
 
-Set `FeatureFlags.destinationAndETAEnabled = false` to hide the destination
-picker entirely, which also means the app never asks for location.
+`project.yml` encodes the target, the local package dependency, the deployment
+target, and the build settings. `DriveQuiz/Info.plist` carries the three usage
+descriptions and the audio background mode, and is committed rather than
+generated so it works either way. The generated `.xcodeproj` is gitignored: a
+hand-written project file is likelier to be subtly corrupt than useful, and a
+regenerated one reviews as a diff of `project.yml`.
+
+Then pick your team under Signing and Capabilities, and change the bundle id
+if `com.example.drivequiz` is taken.
+
+Run on a real iPhone. The simulator has no useful microphone and no car audio
+route, so it will not tell you much.
+
+The logic tests are the fastest signal and need no device:
+
+```sh
+cd DriveQuizKit && swift test
+```
+
+Two notes. `SWIFT_STRICT_CONCURRENCY` is set to `targeted`, because ten defects
+in this codebase were found by reading rather than by tooling and the compiler
+should catch the next ones. And setting
+`FeatureFlags.destinationAndETAEnabled = false` hides the destination picker
+entirely, which also means the app never asks for location.
 
 ## Turning CarPlay on
 
