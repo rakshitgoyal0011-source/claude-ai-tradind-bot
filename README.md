@@ -5,7 +5,8 @@ Voice-only, ETA-aware trivia for drivers.
 - **Phase 1** — the loop end to end, static 20-question pack, manual minutes. Done.
 - **Phase 2** — real destination and ETA from MapKit, pack sizing from ETA. Done.
 - **Phase 3** — persistence, daily streak, don't-repeat logic. Done.
-- **Phase 4** — CarPlay behind the flag. Not started.
+- **Phase 4** — CarPlay behind the flag. Done, and untestable until the
+  entitlement lands.
 
 > **Repo name mismatch.** This landed in `claude-ai-tradind-bot` because it was
 > the only empty repository attached to the session. Nothing here relates to
@@ -36,6 +37,7 @@ DriveQuiz/                       App sources
   Game/                          GameEngine, SessionClock, CardState
   Trip/                          LocationProvider, ETAProvider, ETAClock, DestinationSearch
   Storage/                       FileProgressStore, JSON in Application Support
+  CarPlay/                       GameCoordinator, NowPlayingController, CarPlaySceneDelegate
   Content/                       PackLoader + Packs/starter-20.json
 
 tools/                           Python mirror of the pure logic, see Verification
@@ -67,6 +69,9 @@ calls I made. Each is a one-line change if you disagree.
 | Question cooldown | 14 days before a question can come back |
 | History retention | 120 days, then pruned so the file cannot grow forever |
 | Corrupt progress file | Renamed aside, game starts fresh rather than refusing to run |
+| CarPlay screen contents | Session name, score, day count. Never the question |
+| Transport controls | Next is skip, previous is repeat, play/pause is resume/pause |
+| CarPlay disconnect | The game keeps running on the phone, only the screen goes |
 
 ## Verification status
 
@@ -125,6 +130,52 @@ UIBackgroundModes                    audio
 Set `FeatureFlags.destinationAndETAEnabled = false` to hide the destination
 picker entirely, which also means the app never asks for location.
 
+## Turning CarPlay on
+
+Nothing in `CarPlay/` runs today. Two separate things gate it, and both must
+be true:
+
+1. **`FeatureFlags.carPlayEnabled`**, currently `false`. It keeps Now Playing
+   and the remote commands dormant, so the phone build behaves exactly as it
+   did in Phase 3.
+2. **The `com.apple.developer.carplay-audio` entitlement**, which Apple has
+   not approved yet. Without it the scene is never created, whatever the flag
+   says.
+
+When the entitlement lands, flip the flag and add the scene manifest to
+Info.plist so UIKit knows which class to instantiate:
+
+```xml
+<key>UIApplicationSceneManifest</key>
+<dict>
+  <key>UIApplicationSupportsMultipleScenes</key><true/>
+  <key>UISceneConfigurations</key>
+  <dict>
+    <key>CPTemplateApplicationSceneSessionRoleApplication</key>
+    <array>
+      <dict>
+        <key>UISceneClassName</key>
+        <string>CPTemplateApplicationScene</string>
+        <key>UISceneConfigurationName</key>
+        <string>DriveQuiz-CarPlay</string>
+        <key>UISceneDelegateClassName</key>
+        <string>$(PRODUCT_MODULE_NAME).CarPlaySceneDelegate</string>
+      </dict>
+    </array>
+  </dict>
+</dict>
+```
+
+And in the entitlements file:
+
+```xml
+<key>com.apple.developer.carplay-audio</key><true/>
+```
+
+Declaring `UIApplicationSupportsMultipleScenes` changes how SwiftUI creates the
+phone window too. Test the plain phone build immediately after adding this,
+before worrying about the car.
+
 ## Design decisions worth knowing
 
 **One owner of the audio session.** `AudioSessionController` is the only thing
@@ -164,6 +215,18 @@ the question must be short enough to leave room for the closing summary. The
 planner budgets against the same threshold, so it never queues questions into
 the last 90 seconds that would never be asked.
 
+**The car screen never shows the question.** Constraint two says no question
+may be answerable from a screen, and a prompt on the dash is exactly that. Now
+Playing gets the session name, the score and the day count, which is the same
+thing the phone card shows. The template is `CPNowPlayingTemplate` and nothing
+else, because a browsable list of packs would be another screen to read.
+
+**One command path.** A CarPlay button and a spoken word take the same route
+through the game. Remote controls set an external command and end the current
+listen window early, so a button press does not wait out the eight seconds.
+The external command is consumed whether or not it was legal in the current
+state, so it can never fire twice.
+
 **Progress failures never block a drive.** A corrupt or version-incompatible
 `progress.json` is renamed aside and the game starts from fresh progress.
 Losing a streak is bad; refusing to start because a file will not parse is
@@ -200,3 +263,12 @@ feels alive.
 - **Pause keeps the microphone live.** That is the cost of voice-only resume.
 - **Interruption resume re-speaks the whole question** rather than resuming
   mid-sentence, which is the right call but costs a few seconds.
+- **Nothing in the CarPlay layer has ever run.** It cannot, until the
+  entitlement is approved. It is written to the documented API and reviewed,
+  and that is all that can be claimed. Treat the whole folder as unverified.
+- **`GameCoordinator` is a singleton.** CarPlay scenes are built by UIKit
+  outside the SwiftUI view tree, so the two need a meeting point. It holds a
+  weak engine reference and no logic, but it is still a global.
+- **Phase 4 added no pure logic**, so the corpus count is unchanged at 92. The
+  command mapping and the Now Playing bridge live in the app target, which has
+  no test target.

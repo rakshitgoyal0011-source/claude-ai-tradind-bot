@@ -102,6 +102,13 @@ final class AudioSessionController {
 
     func enterPause() { transition(to: .paused) }
 
+    /// Ends the current listen window early so an external control, such as
+    /// a CarPlay button, takes effect without waiting out the eight seconds.
+    func interruptListening() {
+        guard state == .listening else { return }
+        listener.cancel()
+    }
+
     // MARK: - Interruptions
 
     private func observeInterruptions() {

@@ -23,6 +23,8 @@ final class GameEngine {
 
     private var loopTask: Task<Void, Never>?
     private var stopRequested = false
+    /// Set by a control outside the voice loop, such as a CarPlay button.
+    private var externalCommand: VoiceCommand?
 
     /// Commands the driver may use while a question is on the table.
     private let inGameCommands: Set<VoiceCommand> =
@@ -147,7 +149,7 @@ final class GameEngine {
             await audio.say(question.prompt)
             let heard = await audio.hear(timeout: 8, hints: question.recognitionHints)
 
-            if let command = CommandMatcher.command(in: heard.best, allowing: inGameCommands) {
+            if let command = takeCommand(from: heard, allowing: inGameCommands) {
                 switch command {
                 case .repeatQuestion:
                     continue
@@ -224,7 +226,7 @@ final class GameEngine {
 
         while !stopRequested && !Task.isCancelled {
             let heard = await audio.hear(timeout: 12, hints: ["resume", "stop"])
-            guard let command = CommandMatcher.command(in: heard.best, allowing: pausedCommands)
+            guard let command = takeCommand(from: heard, allowing: pausedCommands)
             else { continue }
 
             switch command {
@@ -252,6 +254,59 @@ final class GameEngine {
         card.isRunning = false
         clock.stop()
         audio.deactivate()
+    }
+
+    // MARK: - External controls
+
+    /// Entry point for anything that is not the microphone: a CarPlay
+    /// button, a lock screen control, the stop button on the card.
+    func handleRemoteCommand(_ command: VoiceCommand) {
+        guard card.isRunning else { return }
+        if command == .stop {
+            stop()
+            return
+        }
+        externalCommand = command
+        // Do not make the driver wait out the listen window.
+        audio.interruptListening()
+    }
+
+    /// An external command wins over the transcript, and is consumed either
+    /// way so it cannot fire twice.
+    private func takeCommand(
+        from heard: Transcript,
+        allowing allowed: Set<VoiceCommand>
+    ) -> VoiceCommand? {
+        if let external = externalCommand {
+            externalCommand = nil
+            if allowed.contains(external) { return external }
+        }
+        return CommandMatcher.command(in: heard.best, allowing: allowed)
+    }
+
+    // MARK: - Now Playing
+
+    /// What a car screen may show. Deliberately excludes the question text:
+    /// no question may be answerable by reading, and a prompt on the dash
+    /// would be exactly that.
+    struct NowPlayingSnapshot: Equatable {
+        let title: String
+        let scoreLine: String
+        let dayLine: String?
+        let elapsed: TimeInterval
+        let duration: TimeInterval
+        let isPlaying: Bool
+    }
+
+    var nowPlayingSnapshot: NowPlayingSnapshot {
+        NowPlayingSnapshot(
+            title: card.sessionName,
+            scoreLine: "Score \(card.scoreLine)",
+            dayLine: card.dailyStreak >= 2 ? "Day \(card.dailyStreak)" : nil,
+            elapsed: min(clock.elapsedSeconds, plan.plannedDuration),
+            duration: plan.plannedDuration,
+            isPlaying: card.isRunning && !card.isPaused
+        )
     }
 
     // MARK: - Spoken copy

@@ -31,6 +31,8 @@ struct StartView: View {
         if let engine, engine.card.isRunning {
             SessionCardView(card: engine.card) {
                 engine.stop()
+                NowPlayingController.shared.deactivate()
+                GameCoordinator.shared.detach()
                 self.engine = nil
             }
         } else {
@@ -235,6 +237,10 @@ struct StartView: View {
                     progress: progress
                 )
                 engine = newEngine
+                // Publish before starting, so the car screen and the lock
+                // screen have something to show from the first utterance.
+                GameCoordinator.shared.attach(newEngine)
+                NowPlayingController.shared.activate()
                 newEngine.start()
             } catch {
                 status = "Could not start: \(error.localizedDescription)"

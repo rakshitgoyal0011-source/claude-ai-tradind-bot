@@ -80,6 +80,8 @@ final class Listener {
     private let engine = AVAudioEngine()
     private var task: SFSpeechRecognitionTask?
     private var request: SFSpeechAudioBufferRecognitionRequest?
+    /// Held so an external control can end the window early.
+    private var collector: ListenCollector?
 
     init(locale: Locale = Locale(identifier: "en-US")) {
         recognizer = SFSpeechRecognizer(locale: locale)
@@ -127,9 +129,11 @@ final class Listener {
         }
 
         let collector = ListenCollector(timeout: timeout, silenceCutoff: silenceCutoff)
+        self.collector = collector
 
         return await withCheckedContinuation { continuation in
             collector.onComplete = { [weak self] candidates in
+                self?.collector = nil
                 self?.teardown()
                 continuation.resume(returning: Transcript(candidates: candidates))
             }
@@ -149,9 +153,16 @@ final class Listener {
         }
     }
 
-    /// Cancels an in-flight listen. Safe to call from any state.
+    /// Ends an in-flight listen immediately, returning whatever was heard so
+    /// far. Safe to call from any state, and safe to call twice.
     func cancel() {
-        teardown()
+        if let collector {
+            // Resumes the awaiting continuation rather than leaving the game
+            // blocked until the eight second timeout expires.
+            collector.complete()
+        } else {
+            teardown()
+        }
     }
 
     private func teardown() {
